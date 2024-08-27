@@ -1,0 +1,205 @@
+import { ClassicPreset as Classic, GetSchemes, NodeEditor } from 'rete';
+
+import { Area2D, AreaExtensions, AreaPlugin } from 'rete-area-plugin';
+import {
+  ConnectionPlugin,
+  Presets as ConnectionPresets,
+} from 'rete-connection-plugin';
+
+import { DataflowEngine } from "rete-engine";
+
+import { VuePlugin, VueArea2D, Presets as VuePresets } from 'rete-vue-plugin';
+
+// import {
+//   ContextMenuPlugin,
+//   ContextMenuExtra,
+//   Presets as ContextMenuPresets,
+// } from 'rete-context-menu-plugin';
+
+type Node = NumberNode | AddNode;
+type Conn =
+  | Connection<NumberNode, AddNode>
+  | Connection<AddNode, AddNode>
+  | Connection<AddNode, NumberNode>;
+type Schemes = GetSchemes<Node, Conn>;
+
+class Connection<A extends Node, B extends Node> extends Classic.Connection<
+  A,
+  B
+> {}
+
+class NumberNode extends Classic.Node {
+  lastNumber: number;
+  area: AreaPlugin<Schemes, AreaExtra>;
+  // constructor(initial: number, change?: (value: number) => void) {
+  constructor(
+    initial: number,
+    area: AreaPlugin<Schemes, AreaExtra>,
+    private process?: () => void,
+  ) {
+    super('Number');
+
+    const change = this.onNumberChange.bind(this);
+    this.lastNumber = initial;
+    this.area = area;
+
+    for (let i = 1; i <= initial; ++i) {
+        this.addOutput(`value_${i}`, new Classic.Output(socket, `${i}`));
+    }
+    
+    this.addControl(
+      'value',
+      new Classic.InputControl('number', { initial, change })
+    );
+  }
+
+  data() {
+    return Object.fromEntries([...Array(this.lastNumber).keys()].map(x => [`value_${x+1}`, x+1]));
+  }
+
+  onNumberChange(value: number) {
+    console.log(`${this.lastNumber} -> ${value}`);
+    const removal = Math.max(0, this.lastNumber - value);
+    const addition = Math.max(0, value - this.lastNumber);
+    console.log(removal);
+    console.log(addition);
+    if (removal > 0) {
+        for (let i = this.lastNumber; i > this.lastNumber - removal; i--) {
+            this.removeOutput(`value_${i}`);
+        }
+    } else if (addition > 0) {
+        for (let i = this.lastNumber + 1; i <= this.lastNumber + addition; ++i) {
+            this.addOutput(`value_${i}`, new Classic.Output(socket, `${i}`));
+        }
+    }
+
+    this.area.update('node', this.id);
+    if (this.process) this.process();
+
+    this.lastNumber = value;
+  }
+}
+
+class AddNode extends Classic.Node<
+  { a: Classic.Socket; b: Classic.Socket },
+  { value: Classic.Socket },
+  { result: Classic.InputControl<"number"> }
+> {
+  constructor(
+    process?: () => void,
+    private update?: (control: Classic.InputControl<"number">) => void
+  ) {
+    super('Add');
+
+    const a = new Classic.Input(socket, "a");
+    const b = new Classic.Input(socket, "b");
+
+    a.addControl(
+      new Classic.InputControl("number", { initial: 0, change: process })
+    );
+    b.addControl(
+      new Classic.InputControl("number", { initial: 0, change: process })
+    );
+
+    this.addInput('a', a);
+    this.addInput('b', b);
+    
+    this.addOutput('value', new Classic.Output(socket, 'Number'));
+    this.addControl(
+      'result',
+      new Classic.InputControl('number', { initial: 0, readonly: true })
+    );
+  }
+
+  data(inputs: { a?: number[]; b?: number[] }): { value: number } {
+    const leftControl = this.inputs.a?.control as Classic.InputControl<"number">;
+    const rightControl = this.inputs.b?.control as Classic.InputControl<"number">;
+
+    const { a, b } = inputs;
+    const value =
+      (a ? a[0] : leftControl.value || 0) +
+      (b ? b[0] : rightControl.value || 0);
+
+    const resultControl = this.controls.result as Classic.InputControl<"number">;
+    resultControl.setValue(value);
+
+    if (this.update) this.update(resultControl);
+
+    return { value };
+  }
+}
+
+type AreaExtra = Area2D<Schemes> | VueArea2D<Schemes>; // | ContextMenuExtra;
+
+const socket = new Classic.Socket('socket');
+
+export async function createEditor(container: HTMLElement) {
+  const editor = new NodeEditor<Schemes>();
+  const area = new AreaPlugin<Schemes, AreaExtra>(container);
+  const connection = new ConnectionPlugin<Schemes, AreaExtra>();
+
+  const vueRender = new VuePlugin<Schemes, AreaExtra>();
+  const dataflowEngine = new DataflowEngine<Schemes>();
+
+  function process() {
+    dataflowEngine.reset();
+
+    editor
+      .getNodes()
+      .filter((n) => n instanceof AddNode)
+      .forEach((n) => dataflowEngine.fetch(n.id));
+  }
+
+//   const contextMenu = new ContextMenuPlugin<Schemes>({
+//     items: ContextMenuPresets.classic.setup([
+//       ['Number', () => new NumberNode(1)],
+//       ['Add', () => new AddNode()],
+//     ]),
+//   });
+
+  editor.use(dataflowEngine);
+  editor.use(area);
+  
+
+  area.use(vueRender);
+
+  area.use(connection);
+  // area.use(contextMenu);
+
+  connection.addPreset(ConnectionPresets.classic.setup());
+
+  vueRender.addPreset(VuePresets.classic.setup());
+  // vueRender.addPreset(VuePresets.contextMenu.setup());
+
+  editor.addPipe((context) => {
+    if (["connectioncreated", "connectionremoved"].includes(context.type)) {
+      process();
+    }
+    return context;
+  });
+
+  const a = new NumberNode(1, area, process);
+  const b = new NumberNode(1, area, process);
+  const add = new AddNode(process, (c) => area.update("control", c.id));
+
+  await editor.addNode(a);
+  await editor.addNode(b);
+  await editor.addNode(add);
+
+  // await editor.addConnection(new Connection(a, 'value', add, 'a'));
+  // await editor.addConnection(new Connection(b, 'value', add, 'b'));
+
+  await area.nodeViews.get(a.id)?.translate(100, 100);
+  await area.nodeViews.get(b.id)?.translate(100, 300);
+  await area.nodeViews.get(add.id)?.translate(400, 150);
+
+  const selector = AreaExtensions.selector();
+  const accumulating = AreaExtensions.accumulateOnCtrl();
+
+  AreaExtensions.selectableNodes(area, selector, { accumulating });
+  AreaExtensions.showInputControl(area);
+
+  return {
+    destroy: () => area.destroy(),
+  };
+}

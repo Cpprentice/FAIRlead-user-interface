@@ -6,12 +6,13 @@ v-select(
     :readonly="data.readonly"
     @pointerdown.stop=""
     @update:modelValue="change"
-    :items="data.selectables"
-    item-title="name"
+    item-title="label"
     return-object=true
     clearable=true
     hide-details=true
+    :items="items"
 )
+    //:items="data.selectables"
     //@input="change"
     //:selected="data.value"
 
@@ -30,13 +31,24 @@ export default defineComponent({
             // if (e.target.selectedIndex > 0) value =  this.data.selectables[e.target.selectedIndex - 1];
             // this.data.setValue(value)
             this.data.setValue(e)
+        },
+        async load() {
+            this.items = await this.data.provider.fetchSelectionOptions()
         }
     },
-    computed: {
-        items() {
-            return [undefined, ...this.data.selectables]
+    mounted() {
+        this.load()
+    },
+    data() {
+        return {
+            items: []
         }
-    }
+    },
+    // computed: {
+    //     items() {
+    //         return [undefined, ...this.data.selectables]
+    //     }
+    // }
 })
 </script>
 
@@ -44,13 +56,13 @@ export default defineComponent({
 @use "sass:math";
 @import "../vars";
 
-select {
-    width: 100%;
-    border-radius: 5px;
-    background-color: white;
-    padding: 2px 6px;
-    border: 1px solid #999;
-    font-size: 110%;
-    box-sizing: border-box;
-}
+// select {
+//     width: 100%;
+//     border-radius: 5px;
+//     background-color: white;
+//     padding: 2px 6px;
+//     border: 1px solid #999;
+//     font-size: 110%;
+//     box-sizing: border-box;
+// }
 </style>

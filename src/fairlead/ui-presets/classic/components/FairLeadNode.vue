@@ -1,9 +1,9 @@
 <template lang="pug">
-.node(:class="[{ selected: data.selected }, data.label.toLowerCase() ]" :style="nodeStyles()" data-testid="node")
+.node(:class="[{ selected: data.selected }, data.label.toLowerCase(), data.size ]" :style="nodeStyles()" data-testid="node")
     .title(data-testid="title")
         v-row
           v-col.justify-space-between.align-self-center
-            span {{data.label}}
+            span {{nodeTitle}}
           v-col.justify-space-between.v-col-auto
             v-dialog(max-width="500")
               template(v-slot:activator="{ props: activatorProps }")
@@ -13,13 +13,25 @@
                   size="x-small"
                   icon="mdi-cog-outline"
                   data-testid="settings-button"
+                  v-show="hasControl"
                 )
               template(v-slot:default="{ isActive }")
-                v-card(title="Dialog")
+                v-card(:title="settingDialogHeader")
                   v-card-text
-                    | Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+                      // Controls
+                      Ref.control(
+                        v-for='[key, control] in controls()',
+                        :key="'control' + key + seed",
+                        :data-testid="'control-'+key"
+                        :emit="emit"
+                        :data="{ type: 'control', payload: control }"
+                      )
                   v-card-actions
                     v-spacer
+                    v-btn(
+                      text="Save"
+                      @click="customEmit({type: 'persistNameChanges'})"
+                    )
                     v-btn(
                       text="Close Dialog"
                       @click="isActive.value = false"
@@ -27,20 +39,21 @@
 
     // Outputs
     .output(v-for='[key, output] in outputs()' :key="'output' + key + seed" :data-testid="'output-'+key")
-        .output-title(data-testid="output-title") {{output.label}}
+        .output-title.output-key(data-testid="output-title", v-if="output.showUnderlined") {{output.label}}
+        .output-title(data-testid="output-title", v-if="!output.showUnderlined") {{output.label}}
         Ref.output-socket(
             :data="{ type: 'socket', side: 'output', key: key, nodeId: data.id, payload: output.socket }"
             :emit="emit"
             data-testid="output-socket")
 
-    // Controls
-    Ref.control(
-    v-for='[key, control] in controls()',
-    :key="'control' + key + seed",
-    :data-testid="'control-'+key"
-    :emit="emit"
-    :data="{ type: 'control', payload: control }"
-    )
+    //- // Controls
+    //- Ref.control(
+    //- v-for='[key, control] in controls()',
+    //- :key="'control' + key + seed",
+    //- :data-testid="'control-'+key"
+    //- :emit="emit"
+    //- :data="{ type: 'control', payload: control }"
+    //- )
 
     // Inputs
     .input(v-for='[key, input] in inputs()' :key="'input' + key + seed" :data-testid="'input-'+key")
@@ -74,7 +87,7 @@ function sortByIndex(entries) {
 }
 
 export default defineComponent({
-    props: ['data', 'emit', 'seed'],
+    props: ['data', 'emit', 'seed', 'customEmit'],
     methods: {
         nodeStyles() {
             return {
@@ -94,6 +107,20 @@ export default defineComponent({
     },
     components: {
         Ref
+    },
+    computed: {
+      hasControl() {
+        return Object.keys(this.data.controls).length > 0
+      },
+      settingDialogHeader() {
+        return `${this.data.label} - Settings`
+      },
+      nodeTitle() {
+        if (this.data.subLabel ?? false) {
+          return `${this.data.label} - ${this.data.subLabel}`
+        }
+        return this.data.label
+      }
     }
 })
 </script>
@@ -167,6 +194,39 @@ export default defineComponent({
         font-size: 14px;
         margin: $socket-margin;
         line-height: $socket-size;
+        //max-width: 240px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        overflow: hidden;
+        //direction: rtl;
+      }
+
+      &.small {
+        .input-title,
+        .output-title {
+          max-width: 170px;
+        }
+      }
+
+      &.medium {
+        .input-title,
+        .output-title {
+          max-width: 240px;
+        }
+      }
+
+      &.large {
+        .input-title,
+        .output-title {
+          max-width: 310px;
+        }
+      }
+
+      &.huge {
+        .input-title,
+        .output-title {
+          max-width: 380px;
+        }
       }
     
       .input-control {
@@ -179,5 +239,12 @@ export default defineComponent({
       .control {
         padding: $socket-margin math.div($socket-size, 2) + $socket-margin;
       }
+
+      .output-key.output-title {
+        text-decoration-line: underline;
+      }
+    }
+    .v-card-text .control {
+      margin-top: 1em !important;
     }
 </style>

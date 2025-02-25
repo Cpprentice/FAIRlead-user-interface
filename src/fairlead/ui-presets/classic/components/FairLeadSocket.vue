@@ -40,4 +40,8 @@ export default {
         margin-left: - math.div($socket-size, 2);
     }
 }
+
+.socket.attribute {
+    background: $socket-color-attribute;
+}
 </style>

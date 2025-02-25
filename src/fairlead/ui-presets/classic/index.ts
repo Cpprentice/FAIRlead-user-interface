@@ -9,18 +9,20 @@ import Connection from './components/FairLeadConnection.vue'
 import ConnectionWrapper from './components/FairLeadConnectionWrapper.vue'
 import FileControl from './components/FairLeadFileControl.vue'
 import TextControl from './components/FairLeadTextControl.vue'
+import DividerControl from './components/FairLeadDividerControl.vue'
 import SelectControl from './components/FairLeadSelectControl.vue'
 import Node from './components/FairLeadNode.vue'
 import Socket from './components/FairLeadSocket.vue'
 
-import * as FairLeadClassicLogicPreset from '../../logic-presets/classic'
+import FairLeadClassicLogicPreset from '../../logic-presets/classic'
+//bimport { FairLeadSelectControl } from '@/fairlead/logic-presets/classic/controls'
 
-export { default as Connection } from './components/FairLeadConnection.vue'
-export { default as FileControl } from './components/FairLeadFileControl.vue'
-export { default as TextControl } from './components/FairLeadTextControl.vue'
-export { default as SelectControl } from './components/FairLeadSelectControl.vue'
-export { default as Node } from './components/FairLeadNode.vue'
-export { default as Socket } from './components/FairLeadSocket.vue'
+// export { default as Connection } from './components/FairLeadConnection.vue'
+// export { default as FileControl } from './components/FairLeadFileControl.vue'
+// export { default as TextControl } from './components/FairLeadTextControl.vue'
+// export { default as SelectControl } from './components/FairLeadSelectControl.vue'
+// export { default as Node } from './components/FairLeadNode.vue'
+// export { default as Socket } from './components/FairLeadSocket.vue'
 
 type Position = {
   x: number;
@@ -91,11 +93,13 @@ export function setup<Schemes extends ClassicScheme, K extends VueArea2D<Schemes
 
       if (context.data.type === 'node') {
         const component = node ? node(context.data) : Node
+        const customEmit = (context.data.payload as FairLeadClassicLogicPreset.FairLeadNode).customEmitHandler.bind(context.data.payload)
 
         return component && {
           component, props: {
             data: context.data.payload,
-            emit
+            emit,
+            customEmit
           }
         }
       } else if (context.data.type === 'connection') {
@@ -148,14 +152,14 @@ export function setup<Schemes extends ClassicScheme, K extends VueArea2D<Schemes
           }
         }
 
-        if (context.data.payload instanceof FairLeadClassicLogicPreset.FairLeadFileControl) {
-          return {
-            component: FileControl,
-            props: {
-              data: payload
-            }
-          }
-        }
+        // if (context.data.payload instanceof FairLeadClassicLogicPreset.FairLeadFileControl) {
+        //   return {
+        //     component: FileControl,
+        //     props: {
+        //       data: payload
+        //     }
+        //   }
+        // }
 
         if (context.data.payload instanceof FairLeadClassicLogicPreset.FairLeadTextControl) {
           return {
@@ -174,6 +178,26 @@ export function setup<Schemes extends ClassicScheme, K extends VueArea2D<Schemes
             }
           }
         }
+
+        if (context.data.payload instanceof FairLeadClassicLogicPreset.FairLeadDividerControl) {
+          return {
+            component: DividerControl,
+            props: {
+              data: payload
+            }
+          }
+        }
+
+        
+
+        // if (context.data.payload instanceof FairLeadSelectControl) {
+        //   return {
+        //     component: SelectControl,
+        //     props: {
+        //       data: payload
+        //     }
+        //   }
+        // }
 
         return null
       }

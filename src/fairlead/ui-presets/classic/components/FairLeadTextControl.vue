@@ -1,36 +1,49 @@
 <template lang="pug">
 v-text-field(
+    :label="data.label"
     density="compact"
     variant="outlined"
     hide-details="auto"
     :type="data.type"
     :readonly="data.readonly"
-    :model-value="text"
-    @pointerdown.stop=""
+    v-model="value"
+    
     @update:modelValue="change"
 )
+//:model-value="text"
 //:value="data.value"
 //@input="change"
+//@pointerdown.stop=""
+//:model-value="value"
 </template>
 
-<script>
-import { defineComponent } from 'vue'
+<script lang="ts" setup>
+import { ref } from 'vue';
 
-export default defineComponent({
-    props: ['data'],
-    methods: {
-        change(e) {
-            // this.data.setValue(e.target.value)
-            this.data.setValue(e)
-        }
-    },
-    data() {
-        console.log('TextControlComponent data() is called')
-        return {
-            text: this.data.value
-        }
-    }
-})
+const props = defineProps(['data']);
+
+const value = ref(props.data.value)
+
+function change(e) {
+    props.data.setValue(e)
+}
+// import { defineComponent } from 'vue'
+
+// export default defineComponent({
+//     props: ['data'],
+//     methods: {
+//         change(e) {
+//             // this.data.setValue(e.target.value)
+//             this.data.setValue(e)
+//         }
+//     },
+//     // data() {
+//     //     console.log('TextControlComponent data() is called')
+//     //     return {
+//     //         text: this.data.value
+//     //     }
+//     // }
+// })
 </script>
 
 <style lang="scss" scoped>

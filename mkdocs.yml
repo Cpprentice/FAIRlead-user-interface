@@ -1,0 +1,33 @@
+site_name: FAIRlead User Interface Documentation
+site_url: https://CPPrentice.github.io/FAIRlead-user-interface/
+docs_dir: docs
+theme:
+  name: material
+  favicon: assets/logo.png
+  logo: assets/logo.png
+  font: false
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+  # the following adds a dark mode toggle - however at the moment this looks bad for the search panes and column visibility dropdown of the data table
+  # palette:
+  # # Palette toggle for dark mode
+  # - scheme: slate
+  #   primary: custom
+  #   toggle:
+  #     icon: material/brightness-4
+  #     name: Switch to light mode
+  # # Palette toggle for light mode
+  # - scheme: default
+  #   primary: custom
+  #   toggle:
+  #     icon: material/brightness-7 
+  #     name: Switch to dark mode
+extra_css:
+  - assets/custom.css
+repo_url: https://github.com/CPPrentice/FAIRlead-user-interface
+
+# # Navigation
+# nav:
+#   - Home: index.md
+#   - 

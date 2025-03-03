@@ -1,0 +1,1029 @@
+openapi: 3.1.0
+info:
+  title: Schema API - OpenAPI 3.1
+  description: |-
+    This is a Schema extraction API based on the OpenAPI 3.1 specification.  You can find out more about
+    Swagger at [https://swagger.io](https://swagger.io). 
+  termsOfService: http://swagger.io/terms/
+  contact:
+    email: philipp.schmurr@kit.edu
+  license:
+    name: MIT
+    identifier: MIT
+  version: 0.7.0
+servers:
+  - url: http://localhost:7373
+tags:
+  - name: schema
+    description: Everything about your existing data's schema
+    externalDocs:
+      description: Find out more
+      url: http://swagger.io
+  - name: entity
+    description: Access to information on the schema of individual entities
+    externalDocs:
+      description: Find out more about our store
+      url: http://swagger.io
+  - name: key
+    description: Operations about keys
+  - name: format
+    description: A file format supported by the schema API
+externalDocs:
+  description: Find out more about Swagger
+  url: http://swagger.io
+paths:
+  /data-sources:
+    get:
+      tags:
+        - data-source
+      summary: Get meta information about all registered data sources
+      description: desc
+      operationId: getAllDataSourceMeta
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DataSource'
+            application/x-yaml:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DataSource'
+            application/xml:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DataSource'
+                xml:
+                  name: data-sources
+    post:
+      tags:
+        - data-source
+      summary: Insert a new data source meta record
+      description: desc
+      operationId: addDataSourceMeta
+      requestBody:
+        description: specification of data source meta record
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DataSource'
+          application/x-yaml:
+            schema:
+              $ref: '#/components/schemas/DataSource'
+          application/xml:
+            schema:
+              $ref: '#/components/schemas/DataSource'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataSource'
+            application/x-yaml:
+              schema:
+                $ref: '#/components/schemas/DataSource'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/DataSource'
+        '400':
+          description: Bad request
+  /data-sources/{dataSourceId}:
+    get:
+      tags:
+        - data-source
+      summary: Get meta information about a specified data sources
+      description: desc
+      operationId: getDataSourceMeta
+      parameters:
+        - $ref: '#/components/parameters/dataSourceId'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DataSource'
+            application/x-yaml:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DataSource'
+            application/xml:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DataSource'
+                xml:
+                  name: data-sources
+  /data-sources/{dataSourceId}/{pluginInputField}:
+    get:
+      tags:
+        - data-source
+      summary: Get content of a specified data sources
+      description: desc
+      operationId: getDataSourceContent
+      parameters:
+        - $ref: '#/components/parameters/dataSourceId'
+        - $ref: '#/components/parameters/pluginInputField'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+    post:
+      tags:
+        - data-source
+      summary: Upload the content of a specified data source
+      description: desc
+      operationId: uploadDataSourceContent
+      parameters:
+        - $ref: '#/components/parameters/dataSourceId'
+        - $ref: '#/components/parameters/pluginInputField'
+      responses:
+        '200':
+          description: successful operation
+  /formats:
+    get:
+      tags:
+        - format
+      summary: Get all supported formats of this API
+      description: desc
+      operationId: getAllFormats
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Format'
+            application/x-yaml:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Format'
+            application/xml:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Format'
+                xml:
+                  name: formats
+  /schemata:
+    get:
+      tags:
+        - schema
+      summary: Get all available schemas from this API server
+      description: desc
+      operationId: getAllSchemas
+      parameters:
+        - $ref: '#/components/parameters/preventOptimization'
+        - $ref: '#/components/parameters/preventAutomaticOptimization'
+        - $ref: '#/components/parameters/preventUserOptimization'
+        - $ref: '#/components/parameters/generateInverseRelations'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Schema'
+            application/xml:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Schema'
+                xml:
+                  name: schemas
+            application/x-yaml:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Schema'
+  /schemata/{schemaId}:
+    get:
+      tags:
+        - schema
+      summary: Get schema by ID
+      description: desc
+      operationId: getSchemaByID
+      parameters:
+        - $ref: '#/components/parameters/schemaId'
+        - $ref: '#/components/parameters/preventOptimization'
+        - $ref: '#/components/parameters/preventAutomaticOptimization'
+        - $ref: '#/components/parameters/preventUserOptimization'
+        - $ref: '#/components/parameters/generateInverseRelations'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Schema'
+            application/x-yaml:
+              schema:
+                $ref: '#/components/schemas/Schema'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/Schema'
+        '404':
+          description: not found
+  /schemata/{schemaId}/corrections/entities:
+    post:
+      tags:
+        - correction
+      summary: Add an entirely new entity
+      description: Add an entirely new entity
+      operationId: addNewEntityCorrection
+      parameters:
+        - $ref: '#/components/parameters/schemaId'
+      requestBody:
+        description: A new entity object
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Entity'
+          application/x-yaml:
+            schema:
+              $ref: '#/components/schemas/Entity'
+          application-xml:
+            schema:
+              $ref: '#/components/schemas/Entity'
+      responses:
+        '200':
+          description: successful operation
+        '400':
+          description: bad request
+          content:
+            text/plain:
+              schema:
+                type: string
+        '404':
+          description: schema not found
+  /schemata/{schemaId}/corrections/entities/{entityId}:
+    post:
+      tags:
+        - correction
+      summary: change entity name
+      description: change entity name
+      operationId: changeEntityNameCorrection
+      parameters:
+        - $ref: '#/components/parameters/schemaId'
+        - $ref: '#/components/parameters/entityId'
+      requestBody:
+        description: new name as plain string
+        required: true
+        content:
+          text/plain:
+            schema:
+              type: string
+      responses:
+        '200':
+          description: successful operation
+        '400':
+          description: bad request
+          content:
+            text/plain:
+              schema:
+                type: string
+        '404':
+          description: schema or entity not found
+  /schemata/{schemaId}/corrections/entities/{entityId}/modifiers:
+    put:
+      tags:
+        - correction
+      summary: Update entity modifiers
+      description: Update entity modifiers
+      operationId: updateEntityModifiersCorrection
+      parameters:
+        - $ref: '#/components/parameters/schemaId'
+        - $ref: '#/components/parameters/entityId'
+      requestBody:
+        description: list of EntityModifier objects
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/EntityModifier'
+          application/x-yaml:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/EntityModifier'
+          application-xml:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/EntityModifier'
+              xml:
+                name: EntityModifiers
+      responses:
+        '200':
+          description: successful operation
+        '400':
+          description: bad request
+          content:
+            text/plain:
+              schema:
+                type: string
+        '404':
+          description: schema or entity not found
+  /schemata/{schemaId}/corrections/entities/{entityId}/attributes:
+    post:
+      tags:
+        - correction
+      summary: Add an entirely new attribute
+      description: Add an entirely new attribute
+      operationId: addNewAttributeCorrection
+      parameters:
+        - $ref: '#/components/parameters/schemaId'
+        - $ref: '#/components/parameters/entityId'
+      requestBody:
+        description: A new attribute object
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Attribute'
+          application/x-yaml:
+            schema:
+              $ref: '#/components/schemas/Attribute'
+          application-xml:
+            schema:
+              $ref: '#/components/schemas/Attribute'
+      responses:
+        '200':
+          description: successful operation
+        '400':
+          description: bad request
+          content:
+            text/plain:
+              schema:
+                type: string
+        '404':
+          description: schema or entity not found
+  /schemata/{schemaId}/corrections/entities/{entityId}/attributes/{attributeId}:
+    post:
+      tags:
+        - correction
+      summary: change attribute name
+      description: change attribute name
+      operationId: changeAttributeNameCorrection
+      parameters:
+        - $ref: '#/components/parameters/schemaId'
+        - $ref: '#/components/parameters/entityId'
+        - $ref: '#/components/parameters/attributeId'
+      requestBody:
+        description: new name as plain string
+        required: true
+        content:
+          text/plain:
+            schema:
+              type: string
+      responses:
+        '200':
+          description: successful operation
+        '400':
+          description: bad request
+          content:
+            text/plain:
+              schema:
+                type: string
+        '404':
+          description: schema, entity or attribute not found
+  /schemata/{schemaId}/corrections/entities/{entityId}/attributes/{attributeId}/modifiers:
+    put:
+      tags:
+        - correction
+      summary: Update attribute modifiers
+      description: Update attribute modifiers
+      operationId: updateAttributeModifiersCorrection
+      parameters:
+        - $ref: '#/components/parameters/schemaId'
+        - $ref: '#/components/parameters/entityId'
+        - $ref: '#/components/parameters/attributeId'
+      requestBody:
+        description: list of AttributeModifier objects
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/AttributeModifier'
+          application/x-yaml:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/AttributeModifier'
+          application-xml:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/AttributeModifier'
+              xml:
+                name: AttributeModifiers
+      responses:
+        '200':
+          description: successful operation
+        '400':
+          description: bad request
+          content:
+            text/plain:
+              schema:
+                type: string
+        '404':
+          description: schema, entity or attribute not found
+  /schemata/{schemaId}/corrections/entities/{entityId}/relations:
+    post:
+      tags:
+        - correction
+      summary: Add an entirely new relation
+      description: Add an entirely new relation
+      operationId: addNewRelationCorrection
+      parameters:
+        - $ref: '#/components/parameters/schemaId'
+        - $ref: '#/components/parameters/entityId'
+      requestBody:
+        description: A new relation object
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Relation'
+          application/x-yaml:
+            schema:
+              $ref: '#/components/schemas/Relation'
+          application-xml:
+            schema:
+              $ref: '#/components/schemas/Relation'
+      responses:
+        '200':
+          description: successful operation
+        '400':
+          description: bad request
+          content:
+            text/plain:
+              schema:
+                type: string
+        '404':
+          description: schema or entity not found
+  /schemata/{schemaId}/corrections/entities/{entityId}/relations/{relationId}:
+    post:
+      tags:
+        - correction
+      summary: change relation name
+      description: change relation name
+      operationId: changeRelationNameCorrection
+      parameters:
+        - $ref: '#/components/parameters/schemaId'
+        - $ref: '#/components/parameters/entityId'
+        - $ref: '#/components/parameters/relationId'
+      requestBody:
+        description: new name as plain string
+        required: true
+        content:
+          text/plain:
+            schema:
+              type: string
+      responses:
+        '200':
+          description: successful operation
+        '400':
+          description: bad request
+          content:
+            text/plain:
+              schema:
+                type: string
+        '404':
+          description: schema, entity or relation not found
+  /schemata/{schemaId}/corrections/entities/{entityId}/relations/{relationId}/modifiers:
+    put:
+      tags:
+        - correction
+      summary: Update relation modifiers
+      description: Update relation modifiers
+      operationId: updateRelationModifiersCorrection
+      parameters:
+        - $ref: '#/components/parameters/schemaId'
+        - $ref: '#/components/parameters/entityId'
+        - $ref: '#/components/parameters/relationId'
+      requestBody:
+        description: list of RelationModifier objects
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/RelationModifier'
+          application/x-yaml:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/RelationModifier'
+          application-xml:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/RelationModifier'
+              xml:
+                name: RelationModifiers
+      responses:
+        '200':
+          description: successful operation
+        '400':
+          description: bad request
+          content:
+            text/plain:
+              schema:
+                type: string
+        '404':
+          description: schema, entity or relation not found
+  /schemata/{schemaId}/diagram:
+    get:
+      tags:
+        - schema
+      summary: Get a diagram for the schema
+      description: desc
+      operationId: getSchemaDiagram
+      parameters:
+        - $ref: '#/components/parameters/schemaId'
+        - name: showAttributes
+          in: query
+          description: Toggle the rendering state of attributes
+          schema:
+            type: boolean
+            default: true
+        - name: selectedEntities
+          in: query
+          description: Specify a list of highlighted entities
+          schema:
+            type: array
+            items:
+              type: string
+            default: []
+        - name: renderDistance
+          description: The distance to render when using highlighted entities
+          in: query
+          schema:
+            type: integer
+            default: 2
+        - $ref: '#/components/parameters/preventOptimization'
+        - $ref: '#/components/parameters/preventAutomaticOptimization'
+        - $ref: '#/components/parameters/preventUserOptimization'
+        - $ref: '#/components/parameters/generateInverseRelations'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            image/svg+xml:
+              schema:
+                type: string
+            text/plain:
+              schema:
+                type: string
+        '404':
+          description: schema not found
+  /schemata/{schemaId}/partitioned-entities:
+    get:
+      tags:
+        - partition
+      description: desc
+      operationId: getPartitionedEntitiesBySchema
+      parameters:
+        - $ref: '#/components/parameters/schemaId'
+        - $ref: '#/components/parameters/preventOptimization'
+        - $ref: '#/components/parameters/preventAutomaticOptimization'
+        - $ref: '#/components/parameters/preventUserOptimization'
+        - $ref: '#/components/parameters/generateInverseRelations'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Partition'
+            application/x-yaml:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Partition'
+            application/xml:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Partition'
+                xml:
+                  name: Partitions
+  /schemata/{schemaId}/entities:
+    get:
+      tags:
+        - entity
+      summary: Get all entities of a schema
+      description: desc
+      operationId: getEntitiesBySchema
+      parameters:
+        - $ref: '#/components/parameters/schemaId'
+        - $ref: '#/components/parameters/preventOptimization'
+        - $ref: '#/components/parameters/preventAutomaticOptimization'
+        - $ref: '#/components/parameters/preventUserOptimization'
+        - $ref: '#/components/parameters/generateInverseRelations'
+        - $ref: '#/components/parameters/entityFilter'
+        - $ref: '#/components/parameters/entityFilterDistance'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Entity'
+            application/xml:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Entity'
+                xml:
+                  name: entities
+            application/x-yaml:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Entity'
+  /schemata/{schemaId}/entities/{entityId}:
+    get:
+      tags:
+        - entity
+      summary: Get a specific entity
+      description: desc
+      operationId: getEntityById
+      parameters:
+        - $ref: '#/components/parameters/schemaId'
+        - $ref: '#/components/parameters/entityId'
+        - $ref: '#/components/parameters/preventOptimization'
+        - $ref: '#/components/parameters/preventAutomaticOptimization'
+        - $ref: '#/components/parameters/preventUserOptimization'
+        - $ref: '#/components/parameters/generateInverseRelations'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Entity'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/Entity'
+                xml:
+                  name: entity
+            application/x-yaml:
+              schema:
+                $ref: '#/components/schemas/Entity'
+components:
+  parameters:
+    dataSourceId:
+      name: dataSourceId
+      in: path
+      schema:
+        type: string
+      required: true
+    pluginInputField:
+      name: pluginInputField
+      in: path
+      schema:
+        type: string
+      required: true
+    EntityPrefix:
+      name: EntityPrefix
+      in: query
+      schema:
+        type: string
+        default: ''
+      required: false
+    preventOptimization:
+      name: preventOptimization
+      in: query
+      schema:
+        type: boolean
+        default: false
+      required: false
+    preventAutomaticOptimization:
+      name: preventAutomaticOptimization
+      in: query
+      schema:
+        type: boolean
+        default: false
+      required: false
+    preventUserOptimization:
+      name: preventUserOptimization
+      in: query
+      schema:
+        type: boolean
+        default: false
+      required: false
+    generateInverseRelations:
+      name: generateInverseRelations
+      in: query
+      description: Toggles whether to generate inverse relations for each existing relation that has no schema based inverse
+      schema:
+        type: boolean
+        default: false
+      required: false
+    entityFilter:
+      name: entityFilter
+      in: query
+      description: Only list entities of the schema that are in range of the specified entities
+      schema:
+        type: array
+        items:
+          type: string
+        default: []
+      required: false
+    entityFilterDistance:
+      name: entityFilterDistance
+      in: query
+      description: Specifies the search distance if entityFilter is used
+      schema:
+        type: integer
+        default: 1
+      required: false
+    entityId:
+      name: entityId
+      in: path
+      description: ID of entity to access
+      required: true
+      schema:
+        type: string
+    schemaId:
+      name: schemaId
+      in: path
+      description: ID of schema to access
+      required: true
+      schema:
+        type: string
+    attributeId:
+      name: attributeId
+      in: path
+      description: ID of attribute to access
+      required: true
+      schema:
+        type: string
+    relationId:
+      name: relationId
+      in: path
+      description: ID of relation to access
+      required: true
+      schema:
+        type: string
+  schemas:
+    DataSource:
+      type: object
+      properties:
+        id:
+          type: string
+        description:
+          type: string
+        plugin:
+          type: string
+        populated_input_fields:
+          type: array
+          items:
+            type: string
+        text_data:
+          type: array
+          items:
+            type: object
+            properties:
+              input_field:
+                type: string
+              value:
+                type: string
+            required:
+              - input_field
+              - value
+      required:
+        - id
+        - plugin
+    EntityLink:
+      type: string
+      format: url
+      examples:
+        - http://localhost/entityXY
+    Format:
+      type: object
+      properties:
+        name:
+          type: string
+          examples:
+            - XML
+        inputs:
+          type: array
+          items:
+            type: string
+    Partition:
+      type: object
+      properties:
+        title:
+          type: string
+          examples:
+            - Partition 1
+        entities:
+          type: array
+          items:
+            $ref: '#/components/schemas/Entity'
+    Schema:
+      type: object
+      properties:
+        id:
+          type: string
+          examples:
+            - case300
+        description:
+          type: string
+          examples:
+            - File based datasource from XY
+        implementation:
+          type: string
+        schemaFile:
+          type: string
+        sourceFile:
+          type: string
+        entities:
+          type: array
+          xml:
+            name: entities
+          items:
+            $ref: '#/components/schemas/EntityLink'
+      xml:
+        name: schema
+    AttributeModifier:
+      $schema: https://json-schema.org/draft/2020-12/schema
+      $id: AttributeModifier
+      title: AttributeModifier
+      type: object
+      properties:
+        attributeModifier:
+          type: string
+      required:
+        - attributeModifier
+      enum:
+        - AttributeModifier: key
+    Attribute:
+      $schema: https://json-schema.org/draft/2020-12/schema
+      $id: Attribute
+      title: Attribute
+      type: object
+      properties:
+        hasAttributeModifier:
+          type: array
+          items:
+            $ref: '#/components/schemas/AttributeModifier'
+          default: []
+        attributeName:
+          type: array
+          items:
+            type: string
+          minItems: 1
+      required:
+        - attributeName
+    EntityModifier:
+      $schema: https://json-schema.org/draft/2020-12/schema
+      $id: EntityModifier
+      title: EntityModifier
+      type: object
+      properties:
+        entityModifier:
+          type: string
+      required:
+        - entityModifier
+      enum:
+        - EntityModifier: weak
+    RelationModifier:
+      $schema: https://json-schema.org/draft/2020-12/schema
+      $id: RelationModifier
+      title: RelationModifier
+      type: object
+      properties:
+        relationModifier:
+          type: string
+      required:
+        - relationModifier
+      enum:
+        - RelationModifier: identifying
+    Cardinality:
+      $schema: https://json-schema.org/draft/2020-12/schema
+      $id: Cardinality
+      title: Cardinality
+      type: object
+      properties:
+        cardinality:
+          type: string
+      required:
+        - cardinality
+      enum:
+        - Cardinality: oneOrNone
+        - Cardinality: oneOrMore
+        - Cardinality: any
+        - Cardinality: exactlyOne
+    Relation:
+      $schema: https://json-schema.org/draft/2020-12/schema
+      $id: Relation
+      title: Relation
+      type: object
+      properties:
+        hasAttribute:
+          type: array
+          items:
+            $ref: '#/components/schemas/Attribute'
+          default: []
+        hasObjectEntity:
+          format: url
+          pattern: http://localhost:7373/schemata/[^/]+/entities/[^/]+
+        hasRelationModifier:
+          type: array
+          items:
+            $ref: '#/components/schemas/RelationModifier'
+          default: []
+        hasSubjectEntity:
+          format: url
+          pattern: http://localhost:7373/schemata/[^/]+/entities/[^/]+
+        inverseRelation:
+          oneOf:
+            - type: string
+            - type: 'null'
+          default: null
+        objectCardinality:
+          $ref: '#/components/schemas/Cardinality'
+        subjectCardinality:
+          $ref: '#/components/schemas/Cardinality'
+        relationName:
+          type: array
+          items:
+            type: string
+          minItems: 1
+      required:
+        - hasObjectEntity
+        - hasSubjectEntity
+        - objectCardinality
+        - subjectCardinality
+        - relationName
+    Entity:
+      $schema: https://json-schema.org/draft/2020-12/schema
+      $id: Entity
+      title: Entity
+      type: object
+      properties:
+        hasAttribute:
+          type: array
+          items:
+            $ref: '#/components/schemas/Attribute'
+          default: []
+        hasEntityModifier:
+          type: array
+          items:
+            $ref: '#/components/schemas/EntityModifier'
+          default: []
+        isObjectInRelation:
+          type: array
+          items:
+            $ref: '#/components/schemas/Relation'
+          default: []
+        isSubjectInRelation:
+          type: array
+          items:
+            $ref: '#/components/schemas/Relation'
+          default: []
+        entityName:
+          type: array
+          items:
+            type: string
+          minItems: 1
+        entityUrl:
+          oneOf:
+            - type: string
+            - type: 'null'
+          default: null
+      required:
+        - entityName

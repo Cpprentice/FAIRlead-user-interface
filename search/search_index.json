@@ -1,0 +1,1 @@
+{"config":{"lang":["en"],"separator":"[\\s\\-]+","pipeline":["stopWordFilter"]},"docs":[{"location":"","title":"FAIRlead-user-interface documentation","text":"<p>Welcome to the documentation of the user interface for the FAIRlead project.</p>"},{"location":"api-documentation/","title":"Api documentation","text":""}]}

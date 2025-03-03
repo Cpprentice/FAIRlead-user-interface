@@ -25,6 +25,7 @@ theme:
   #     name: Switch to dark mode
 extra_css:
   - assets/custom.css
+  - https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css
 repo_url: https://github.com/CPPrentice/FAIRlead-user-interface
 
 # # Navigation

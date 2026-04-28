@@ -34,9 +34,26 @@
                 Prevent Automatic Optimization
             </template>
         </v-switch>
+        <v-switch
+            v-model="entityGenerationSettings.preventEnhancement"
+            color="teal"
+        >
+            <template v-slot:label>
+                Prevent Enhancement (new)
+            </template>
+        </v-switch>
+        <v-switch
+            v-model="entityGenerationSettings.preventStructuralEnhancement"
+            :disabled="entityGenerationSettings.preventEnhancement"
+            color="teal"
+        >
+            <template v-slot:label>
+                Prevent Structural Enhancement (new)
+            </template>
+        </v-switch>
         <v-btn
             color="teal"
-            @click.stop="reload()"
+            @click="reload"
         >
             Reload
         </v-btn>
@@ -53,8 +70,9 @@ const router = useRouter()
 const route = useRoute()
 
 async function reload() {
-    router.push('')
-    router.push({path: route.path, force: true})
+    const path = route.path;
+    await router.push('/')
+    await router.push({path: path, force: true})
     // if (route.name ?? '' in ['schema', 'filtered-schema']) {
     //     await cachedEntityProvider.fetchEntities(route.params.schemaId);
     // }

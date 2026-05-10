@@ -14,5 +14,9 @@ export default defineConfig({
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))
     }
-  }
+  },
+  // To use the env here we need to manually inject it:
+  //  https://v7.vite.dev/config/#using-environment-variables-in-config
+  // base: import.meta.env.VITE_BASE_PATH || "/"
+  base: './'
 })

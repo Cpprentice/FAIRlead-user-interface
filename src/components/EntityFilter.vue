@@ -1,6 +1,6 @@
 <template>
     <v-autocomplete 
-        v-if="entityChoices && entityChoices.length"
+        v-if="choices && choices.length"
         density="compact"
         variant="solo"
         hide-selected
@@ -11,7 +11,7 @@
         closable-chips
         :disabled="disabled"
         v-model="selectedEntities"
-        :items="entityChoices"
+        :items="choices"
         item-title="label"
         @update:model-value="entitySelectionUpdate"
         ><!-- dense v-model="partitionSelection"
@@ -21,14 +21,15 @@
 
 <script setup lang="ts">
 import { loadingState } from '@/providers/loading_state_provider';
-import { cachedEntityProvider, SchemaEntityProvider } from '@/providers/schema_api';
+import { cachedEntityProvider, classNameList, routeSensitiveClassNameList, SchemaEntityProvider } from '@/providers/schema_api';
 import { FetchError, SchemaApi } from 'schema_api';
 import { onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 
 
-const entityChoices = ref([]);
-const selectedEntities = ref([]);
+// let choices = ref<string[]>([]);
+const choices = routeSensitiveClassNameList;
+const selectedEntities = ref<string[]>([]);
 const disabled = ref(false);
 
 const route = useRoute();
@@ -47,9 +48,11 @@ async function setupEntityChoices() {
     disabled.value = true
     if (route.name == 'filtered-schema') {
         const provider = new SchemaEntityProvider(route.params.schemaId)
-        entityChoices.value = await provider.fetchSelectionLabels()
+        choices.value = await provider.fetchSelectionLabels()
+    } else if (route.name == 'filtered-linkml-schema') {
+        choices = classNameList  // Not sure if that works
     } else {
-        entityChoices.value = []
+        choices.value = []
     }
     disabled.value = false
 }

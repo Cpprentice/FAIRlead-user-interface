@@ -13,6 +13,7 @@ import DividerControl from './components/FairLeadDividerControl.vue'
 import SelectControl from './components/FairLeadSelectControl.vue'
 import Node from './components/FairLeadNode.vue'
 import Socket from './components/FairLeadSocket.vue'
+import FairLeadClassAnnotationNode from './components/FairLeadClassAnnotationNode.vue'
 
 import FairLeadClassicLogicPreset from '../../logic-presets/classic'
 //bimport { FairLeadSelectControl } from '@/fairlead/logic-presets/classic/controls'
@@ -94,6 +95,17 @@ export function setup<Schemes extends ClassicScheme, K extends VueArea2D<Schemes
       if (context.data.type === 'node') {
         const component = node ? node(context.data) : Node
         const customEmit = (context.data.payload as FairLeadClassicLogicPreset.FairLeadNode).customEmitHandler.bind(context.data.payload)
+
+        if (context.data.payload instanceof FairLeadClassicLogicPreset.ClassAnnotationNode) {
+          return {
+            component: FairLeadClassAnnotationNode,
+            props: {
+              data: context.data.payload,
+              emit,
+              customEmit
+            }
+          }
+        }
 
         return component && {
           component, props: {

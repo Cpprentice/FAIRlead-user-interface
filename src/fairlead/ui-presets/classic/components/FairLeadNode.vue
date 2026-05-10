@@ -39,8 +39,10 @@
 
     // Outputs
     .output(v-for='[key, output] in outputs()' :key="'output' + key + seed" :data-testid="'output-'+key")
+        slot(name="output-markers", :item="output")
         .output-title.output-key(data-testid="output-title", v-if="output.showUnderlined") {{output.label}}
         .output-title(data-testid="output-title", v-if="!output.showUnderlined") {{output.label}}
+        slot(name="output-actions", :item="output")
         Ref.output-socket(
             :data="{ type: 'socket', side: 'output', key: key, nodeId: data.id, payload: output.socket }"
             :emit="emit"

@@ -19,33 +19,45 @@ export type SelectionProvider<T> = {
     fetchSelectionOptions: () => Promise<SelectionOption<T>[]>
 }
 
-export class FairLeadSelectControl<T> extends ReteTypes.Control {
-    value?: SelectionOption<T>;
+export abstract class FairLeadControl<T> extends ReteTypes.Control {
+    value?: T;
+    constructor(public options?: InputControlOptions<T>) {
+        super()
+    }
+
+    setValue(value?: T) {
+        this.value = value;
+        if (this.options?.change) this.options.change(value);  // TODO this could fire twice if we programatically change the value - as the UI will probably call setValue again?
+    }
+}
+
+export class FairLeadSelectControl<T> extends FairLeadControl<SelectionOption<T>> {
+    // value?: SelectionOption<T>;
     readonly: boolean;
     provider: SelectionProvider<T>;
 
-    constructor(public selectionProvider: SelectionProvider<T>, public options?: InputControlOptions<SelectionOption<T>>) {
-        super()
+    constructor(public selectionProvider: SelectionProvider<T>, options?: InputControlOptions<SelectionOption<T>>) {
+        super(options)
         this.id = getUID()
         this.readonly = options?.readonly || false
         this.provider = selectionProvider;
     }
 
-    setValue(value?: SelectionOption<T>) {
-        this.value = value;
-        if (this.options?.change) this.options.change(value)
-    }
+    // setValue(value?: SelectionOption<T>) {
+    //     this.value = value;
+    //     if (this.options?.change) this.options.change(value)
+    // }
 }
 
-export class FairLeadDividerControl extends ReteTypes.Control {
-    constructor(public options?: InputControlOptions<string>) {
-        super()
+export class FairLeadDividerControl extends FairLeadControl<string> {
+    constructor(options?: InputControlOptions<string>) {
+        super(options)
         this.id = getUID()
     }
 }
 
-export class FairLeadTextControl extends ReteTypes.Control {
-    value?: string
+export class FairLeadTextControl extends FairLeadControl<string> {
+    // value?: string
     readonly: boolean
     label?: string
   
@@ -53,8 +65,8 @@ export class FairLeadTextControl extends ReteTypes.Control {
      * @constructor
      * @param options Control options
      */
-    constructor(public options?: InputControlOptions<string>) {
-        super()
+    constructor(options?: InputControlOptions<string>) {
+        super(options)
         this.id = getUID()
         this.readonly = options?.readonly || false
         this.label = options?.label
@@ -67,8 +79,8 @@ export class FairLeadTextControl extends ReteTypes.Control {
      * Set control value
      * @param value Value to set
      */
-    setValue(value?: string) {
-        this.value = value
-        if (this.options?.change) this.options.change(value)
-    }
+    // setValue(value?: string) {
+    //     this.value = value
+    //     if (this.options?.change) this.options.change(value)
+    // }
 }

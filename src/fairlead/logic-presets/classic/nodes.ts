@@ -1,8 +1,8 @@
 import { ClassicPreset as ReteTypes, GetSchemes, NodeEditor, BaseSchemes, ConnectionBase, NodeBase } from 'rete';
 import { AreaPlugin } from 'rete-area-plugin';
 import { DataflowNode } from 'rete-engine';
-import { FairLeadSelectControl, FairLeadTextControl, FairLeadDividerControl } from './controls';
-import { CorrectionApi, Entity, Schema, SchemaApi } from 'schema_api';
+import { FairLeadSelectControl, FairLeadTextControl, FairLeadDividerControl, FairLeadControl } from './controls';
+import { ClassDefinitionView, CorrectionApi, Entity, Schema, SchemaApi, SlotDefinitionView } from 'schema_api';
 import { EntityProvider, SchemaEntityProvider, SchemaProvider } from '@/providers/schema_api';
 import { attributeSocket, streamSocket } from './sockets';
 import { FairleadOutput } from './outputs';
@@ -21,8 +21,9 @@ export type FairLeadCustomEmitMessage = {
 }
 type CustomEventCallback = (payload: any) => void;
 
-class FairLeadNode extends ReteTypes.Node {
+abstract class FairLeadNode extends ReteTypes.Node {
     subLabel: string = '';
+    abstract nodeType: string;
     private customEventHandlers: Map<string, CustomEventCallback> = new Map();
     
     // width = 280;
@@ -42,8 +43,8 @@ class FairLeadNode extends ReteTypes.Node {
 
     get maxTextLength() {
         let combinedList = [
-            ...Object.values(this.outputs).map(x => x.label.length),
-            ...Object.values(this.inputs).map(x => x.label.length),
+            ...Object.values(this.outputs).map(x => x.label.length * 1.4),
+            ...Object.values(this.inputs).map(x => x.label.length * 1.4),
             Math.floor((this.label + this.subLabel).length * 1.6)
         ]
         // return Math.max(...combinedList.map(str => str.length));
@@ -105,10 +106,34 @@ class FairLeadNode extends ReteTypes.Node {
             callback(message.payload)
         }
     }
+
+    static fromJson(json: any, options: FairLeadNodeOptions): FairLeadNode {
+        let node: FairLeadNode | null = null;
+        switch (json.type) {
+            case 'Entity': node = new EntityNode(options); break;
+            case 'Schema': node = new SchemaNode(options); break;
+            default: throw new Error(`Unkown Node type: ${json.type}`)
+        }
+
+        for (let control of json.controls) {
+            let existingControl = node.controls[control.key] as FairLeadControl<unknown>;
+            existingControl.setValue(control.value);
+        }
+        return node;
+    }
+
+    toJson(): any {
+        const controls = this.controls ?? {} as { [x: string]: FairLeadControl<unknown>};
+        const controlData = Object.entries(controls).map(([key, obj]) => ({key, value: obj.value}));
+        return {
+            nodeType: this.nodeType,
+            controls: controlData
+        }
+    }
 }
 
 export class EntityNode extends FairLeadNode implements DataflowNode {
-
+    nodeType = 'Entity'
     schemaProvider: SchemaProvider;
     entityProvider?: SchemaEntityProvider;
 
@@ -157,6 +182,7 @@ export class EntityNode extends FairLeadNode implements DataflowNode {
   }
 
 export class SchemaNode extends FairLeadNode implements DataflowNode {
+    nodeType = 'Schema'
     provider: SchemaProvider;
 
     constructor(options: FairLeadNodeOptions) {
@@ -238,7 +264,70 @@ function truncateTitle(title: string) {
     return title
 }
 
+
+export class ClassAnnotationNode extends FairLeadNode {
+    nodeType = 'ClassAnnotation'
+
+    constructor(public class_: ClassDefinitionView, public schemaName: string, options: FairLeadNodeOptions) {
+        let className = class_.name;
+
+        super(`Class - ${truncateTitle(className)}`, options)
+
+        // this.addCustomEvent('persistNameChanges', this.checkNameChanges.bind(this))
+
+        this.addControl(
+            'class_name',
+            new FairLeadTextControl({ initial: className, label: 'ClassName' })
+        );
+
+        this.addInput("self", new ReteTypes.Input(streamSocket, className))
+        if (class_.relations) {
+            this.addControl('divider1', new FairLeadDividerControl())
+        }
+        for (const [key, relation] of Object.entries(class_.relations) as [string, SlotDefinitionView][]) {
+        //for (let [relationKey, relation] of class_.relations ?? {}) {
+            let extendedRelationName = `${relation.name}-${relation.range}`;
+            let relationName = relation.name;
+            this.addOutput(extendedRelationName, new FairleadOutput(streamSocket, relationName, false, [class_, relation]));
+            this.addControl(`relation_${relationName}`, new FairLeadTextControl({initial: relationName, label: 'RelationName'}))
+        }
+        if (reteSettings.showAttributes) {
+            if (class_.attributes) {
+                this.addControl('divider2', new FairLeadDividerControl())
+            }
+            for (const [key, attribute] of Object.entries(class_.attributes) as [string, SlotDefinitionView][]) {
+                // const mods = attribute.hasAttributeModifier ?? [];
+                const isKey = attribute.key;
+                this.addOutput(attribute.name, new FairleadOutput(attributeSocket, attribute.name, isKey, [class_, attribute]));
+                this.addControl(`attribute_${attribute.name}`, new FairLeadTextControl({initial: attribute.name, label: 'AttributeName'}))
+            }
+        }
+    }
+}
+
+export class StaticClassNode extends FairLeadNode {
+    nodeType = 'StaticClass'
+    constructor(public cls: ClassDefinitionView, public schemaName: string, options: FairLeadNodeOptions) {
+
+        super(`Class - ${truncateTitle(cls.name)}`, options)
+
+        this.addInput("self", new ReteTypes.Input(streamSocket, cls.name))
+        for (const [key, relation] of Object.entries(cls.relations) as [string, SlotDefinitionView][]) {
+            let extendedRelationName = `${relation.name}-${relation.range}`;
+            let relationName = relation.name;
+            this.addOutput(extendedRelationName, new FairleadOutput(streamSocket, relationName, false, [cls, relation]));
+        }
+        if (reteSettings.showAttributes) {
+            for (const [key, attribute] of Object.entries(cls.attributes) as [string, SlotDefinitionView][]) {
+                const isKey = attribute.key;
+                this.addOutput(attribute.name, new FairleadOutput(attributeSocket, attribute.name, isKey, [cls, attribute]));
+            }
+        }
+    }
+}
+
 export class StaticEntityNode extends FairLeadNode {
+    nodeType = 'StaticEntity'
     constructor(public entity: Entity, public schemaName: string, options: FairLeadNodeOptions) {
         let entityName = entity.entityName[0];
 
@@ -258,7 +347,7 @@ export class StaticEntityNode extends FairLeadNode {
         for (let relation of entity.isSubjectInRelation ?? []) {
             let extendedRelationName = `${relation.relationName[0]}-${relation.hasObjectEntity}`;
             let relationName = relation.relationName[0];
-            this.addOutput(extendedRelationName, new FairleadOutput(streamSocket, relation.relationName[0], false));
+            this.addOutput(extendedRelationName, new FairleadOutput(streamSocket, relation.relationName[0], false, null));
             this.addControl(`relation_${relationName}`, new FairLeadTextControl({initial: relationName, label: 'RelationName'}))
         }
         if (reteSettings.showAttributes) {
@@ -268,7 +357,7 @@ export class StaticEntityNode extends FairLeadNode {
             for (let attribute of entity.hasAttribute ?? []) {
                 const mods = attribute.hasAttributeModifier ?? [];
                 const isKey = mods.find(mod => mod.attributeModifier == 'key') !== undefined;
-                this.addOutput(attribute.attributeName[0], new FairleadOutput(attributeSocket, attribute.attributeName[0], isKey));
+                this.addOutput(attribute.attributeName[0], new FairleadOutput(attributeSocket, attribute.attributeName[0], isKey, null));
                 this.addControl(`attribute_${attribute.attributeName[0]}`, new FairLeadTextControl({initial: attribute.attributeName[0], label: 'AttributeName'}))
             }
         }
@@ -310,3 +399,8 @@ export class StaticEntityNode extends FairLeadNode {
     //     await correctionApi.changeEntityNameCorrection("test_data_source", activeEntityName, newEntityName)  // TODO fix hardcoded schema
     // }
 }
+
+
+// export class LinkMLNode extends FairLeadNode {
+    
+// }

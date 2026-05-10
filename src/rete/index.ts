@@ -1,11 +1,13 @@
 import { createEditor as createLegacyEditor } from './default'
 import { createEditor as createDefaultEditor } from './fairlead'
+import { createEditor as createAnnotationEditor } from './fairleadAnnotation'
 import { createEditor as createPerfEditor } from './perf'
 import { createEditor as createCustomEditor } from './customization'
 import { createEditor as create3DEditor } from './3d'
 
 const factory = {
   'default': createDefaultEditor,
+  'annotation': createAnnotationEditor,
   // 'default': createLegacyEditor,
   'legacy': createLegacyEditor,
   'perf': createPerfEditor,

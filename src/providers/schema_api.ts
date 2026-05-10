@@ -1,7 +1,9 @@
-import { Entity, EntityApi, Partition, PartitionApi, Schema, SchemaApi } from "schema_api";
+import { ClassDefinitionView, Configuration, EnhancementApi, Entity, EntityApi, Partition, PartitionApi, Schema, SchemaApi } from "schema_api";
 import { SelectionProvider } from '@/fairlead/logic-presets/classic/controls'
-import { reactive } from "vue";
+import { reactive, ref, watch } from "vue";
 import { entityGenerationSettings } from "./entity_generation_settings_provider";
+import { useDebounceFn, UseDebounceFnReturn } from "./util";
+import { useRoute } from "vue-router";
 
 export class SchemaProvider implements SelectionProvider<Schema> {
 
@@ -66,6 +68,85 @@ export class EntityProvider {
 }
 
 
+export class ClassProvider {
+    schemaApi: SchemaApi;
+
+    constructor(public schemaId: string) {
+        this.schemaApi = new SchemaApi();
+    }
+
+    async fetch() {
+        console.trace('Starting fetch of classes')
+        return (await this.schemaApi.getClassesBySchemaRaw({schemaId: this.schemaId, ...entityGenerationSettings})).value();
+    }
+}
+
+
+class CachedClassProvider {
+    classes: ClassDefinitionView[];
+    debouncedFetch: UseDebounceFnReturn<(schemaId: string) => Promise<void>>;
+
+    constructor() {
+        this.classes = [];
+        this.debouncedFetch = useDebounceFn(async (schemaId: string) => {
+            const classProvider = new ClassProvider(schemaId);
+            this.classes = await classProvider.fetch();
+            const x = 42;
+        }, 500, {maxWait: 3000, rejectOnCancel: false});
+    }
+
+    async fetchClasses(schemaId: string) {
+        const classProvider = new ClassProvider(schemaId);
+        this.classes = await classProvider.fetch();
+    }
+
+    async fetchClassesDebounced(schemaId: string) {
+        await this.debouncedFetch(schemaId);
+        const _ = 42;
+    }
+}
+
+const cachedClassProvider = ref(new CachedClassProvider());
+
+export {
+    cachedClassProvider
+}
+
+
+const classNameList = ref<string[]>([]);
+watch(() => cachedClassProvider.value.classes, (newClasses, oldClasses) => {
+    classNameList.value = newClasses.map((x) => x.name);
+},  { deep: true })
+export { classNameList }
+
+
+const legacyEntityNameList = ref<string[]>([]);
+const route = useRoute();
+
+watch(async () => route.fullPath, async (newPath, oldPath) => {
+    if (route.name != 'not-found') {
+        if (route.name == 'filtered-schema') {
+            const provider = new SchemaEntityProvider(route.params.schemaId)
+            legacyEntityNameList.value = await provider.fetchSelectionLabels()
+        }
+    }
+})
+
+
+const routeSensitiveClassNameList = ref<string[]>([]);
+watch([legacyEntityNameList, classNameList], () => {
+    if (route.name == 'filtered-schema') {
+        routeSensitiveClassNameList.value = legacyEntityNameList.value;
+    } else if (route.name == 'filtered-linkml-schema') {
+        routeSensitiveClassNameList.value = classNameList.value;
+    } else {
+        routeSensitiveClassNameList.value = [];
+    }
+})
+export { routeSensitiveClassNameList }
+
+
+
 class CachedEntityProvider {
     entityApi: EntityApi;
     partitionApi: PartitionApi;
@@ -108,3 +189,29 @@ class CachedEntityProvider {
 const cachedEntityProvider = reactive(new CachedEntityProvider());
 
 export {cachedEntityProvider}
+
+
+class CachedMappingProvider {
+    // mappingApi: MappingApi;
+    // mappings: Mapping[];
+    mapping: string[] | null;
+
+    constructor() {
+        this.mapping = null;
+    }
+
+    async fetchMapping(mappingId: string) {
+        this.mapping = await Promise.resolve(["123", "456"]);
+    }
+
+    clearMapping() {
+        this.mapping = [];
+    }
+}
+
+const cachedMappingProvider = reactive(new CachedMappingProvider());
+
+export {cachedMappingProvider}
+
+const config = new Configuration()
+export const enhancementApi = new EnhancementApi(config);

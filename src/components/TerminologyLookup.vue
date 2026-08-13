@@ -3,7 +3,7 @@
 </template>
 <script setup lang="ts">
 import { onMounted, useTemplateRef, watch } from 'vue';
-import { createAutocomplete, createSearchBar } from '@ts4nfdi/terminology-service-suite-js';
+// import { createAutocomplete } from '@ts4nfdi/terminology-service-suite-js';
 import { OntologicalAnnotation, OntologicalAnnotationFromJSON } from 'schema_api';
 import { attributeUnderAnnotation } from '@/providers/component_under_annotation';
 
@@ -22,7 +22,9 @@ const emit = defineEmits<{
     (e: 'terminologyUpdated', value: OntologicalAnnotation[]): void
 }>();
 
-function buildTerminologyLookup() {
+async function buildTerminologyLookup() {
+    const { createAutocomplete } = await import('@ts4nfdi/terminology-service-suite-js')
+
     let preselected = [] as {label?: string, iri: string}[];
     if (attributeUnderAnnotation.value?.annotations != undefined) {
         preselected = attributeUnderAnnotation.value?.annotations.map((x) => {
@@ -54,13 +56,13 @@ function buildTerminologyLookup() {
     );
 }
 
-watch(attributeUnderAnnotation, (newAttribute) => {
+watch(attributeUnderAnnotation, async (newAttribute) => {
     if (newAttribute == undefined || newAttribute == null) return;
-    buildTerminologyLookup();
+    await buildTerminologyLookup();
 })
 
-onMounted(() => {
-    buildTerminologyLookup();
+onMounted(async () => {
+    await buildTerminologyLookup();
 
     
     stopEvent = (e: Event) => {

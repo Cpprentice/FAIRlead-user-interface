@@ -3,7 +3,7 @@
 </template>
 <script setup lang="ts">
 import { onMounted, useTemplateRef, watch } from 'vue';
-import { createMetadata } from '@ts4nfdi/terminology-service-suite-js';
+// import { createMetadata } from '@ts4nfdi/terminology-service-suite-js';
 
 const container = useTemplateRef('metadata-container');
 
@@ -11,8 +11,8 @@ const props = defineProps<{
     iri: string
 }>();
 
-function buildTerminologyDisplay() {
-
+async function buildTerminologyDisplay() {
+    const { createMetadata } = await import('@ts4nfdi/terminology-service-suite-js');
     createMetadata(
         {
             // api: "https://semanticlookup.zbmed.de/api/",
@@ -36,8 +36,8 @@ function buildTerminologyDisplay() {
     );
 }
 
-onMounted(() => {
-    buildTerminologyDisplay();
+onMounted(async () => {
+    await buildTerminologyDisplay();
 })
 
 </script>

@@ -20,44 +20,53 @@
 </template>
 
 <script setup lang="ts">
+import { SelectionProvider } from '@/fairlead/logic-presets/classic/controls';
 import { loadingState } from '@/providers/loading_state_provider';
 import { cachedEntityProvider, classNameList, routeSensitiveClassNameList, SchemaEntityProvider } from '@/providers/schema_api';
 import { FetchError, SchemaApi } from 'schema_api';
-import { onMounted, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
+
+const props = defineProps<{
+    optionProvider: SelectionProvider<unknown> | undefined | null,
+    externallyDisabled: boolean
+}>();
+
+const emit = defineEmits<{
+    update: [selection: string[]]
+}>();
 
 
 let choices = ref<string[]>([]);
-// const choices = routeSensitiveClassNameList;
 const selectedEntities = ref<string[]>([]);
-const disabled = ref(false);
+const internallyDisabled = ref(false);
 
-const route = useRoute();
+const disabled = computed(() => {
+    return props.externallyDisabled || internallyDisabled.value
+});
 
-async function entitySelectionUpdate(selection) {
-    loadingState.value = true
-    disabled.value = true
-    try {
-        await cachedEntityProvider.fetchFilteredEntities(route.params.schemaId, selection)
-    } finally {
-        disabled.value = false
-    }
+// const route = useRoute();
+
+async function entitySelectionUpdate(selection: string[]) {
+    // loadingState.value = true
+    emit("update", selection)
 }
 
 async function setupEntityChoices() {
-    disabled.value = true
-    if (route.name == 'filtered-schema') {
-        const provider = new SchemaEntityProvider(route.params.schemaId)
-        choices.value = await provider.fetchSelectionLabels()
-    } else if (route.name == 'filtered-linkml-schema') {
-        choices = classNameList  // Not sure if that works
+    internallyDisabled.value = true
+    if (props.optionProvider) {
+        choices.value = await props.optionProvider.fetchSelectionLabels()
     } else {
         choices.value = []
     }
-    disabled.value = false
+    internallyDisabled.value = false
 }
 
-watch(() => route.fullPath, async (newPath, oldPath) => {
+// watch(() => route.fullPath, async (newPath, oldPath) => {
+//     await setupEntityChoices()
+// })
+
+watch(() => props.optionProvider, async (newProvider) => {
     await setupEntityChoices()
 })
 

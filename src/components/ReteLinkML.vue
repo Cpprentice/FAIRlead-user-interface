@@ -6,7 +6,7 @@
 
 
 <script lang="ts" setup>
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { createEditor } from '../rete/fairleadLinkML';
 import { cachedClassProvider } from '../providers/schema_api';
@@ -18,8 +18,16 @@ const editorContainer = ref(null);
 const route = useRoute();
 const editor = ref(null);
 
-watch(() => cachedClassProvider.value.classes, async (newClasses, oldClasses) => {
-    await editorSetup(newClasses);
+const isFiltered = computed(() => {
+  return route.name == 'filtered-linkml-schema'
+})
+
+watch([
+  () => cachedClassProvider.value.classes,
+  () => cachedClassProvider.value.filteredClasses
+], async ([newClasses, newFilteredClasses], oldClasses) => {
+    if (isFiltered) await editorSetup(newFilteredClasses);
+    else await editorSetup(newClasses)
     loadingState.value = false
 },  { deep: true })
 

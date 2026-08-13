@@ -7,7 +7,8 @@
         <v-spacer></v-spacer>
         <!--<TestDialog></TestDialog>-->
         <PartitionSelector></PartitionSelector>
-        <EntityFilter></EntityFilter>
+        <EntityFilter v-if="isLegacy"></EntityFilter>
+        <ClassFilter v-if="!isLegacy"></ClassFilter>
         <!-- <v-btn icon><v-icon>mdi-plus</v-icon></v-btn> -->
         <ModeSwitcher></ModeSwitcher>
         <DownloadControls></DownloadControls>
@@ -26,11 +27,21 @@
         dense
         
       ><!--@update:selected="selected"-->
+          <v-list-item title="LinkML" subtitle="section"></v-list-item>
+          <v-list-item v-for="schema in schemaChoices" router :to="`/schemas/${schema}/linkml`">
+            <v-list-item-title>{{ schema }}</v-list-item-title>
+          </v-list-item>
+          <v-divider></v-divider>
+          <v-list-item title="LinkML Filtered" subtitle="section"></v-list-item>
+          <v-list-item v-for="schema in schemaChoices" router :to="`/schemas/${schema}/linkml/filtered`">
+            <v-list-item-title>{{ schema }}</v-list-item-title>
+          </v-list-item>
+          <v-divider></v-divider>
           <v-list-item title="Mappings" subtitle="section"></v-list-item>
           <v-list-item router to="/mappings/new">
             <v-list-item-title><v-icon>mdi-plus</v-icon> New</v-list-item-title>
           </v-list-item>
-          <v-list-item router to="/mappings/blub" title="Test"></v-list-item>
+          <!--<v-list-item router to="/mappings/blub" title="Test"></v-list-item>-->
           <v-divider></v-divider>
           <v-list-item title="ER Diagrams" subtitle="section"></v-list-item>
           <!--<v-divider></v-divider>-->
@@ -62,9 +73,10 @@
 <script setup lang="ts">
 import { cachedClassProvider, cachedEntityProvider, cachedMappingProvider } from '@/providers/schema_api';
 import { FetchError, SchemaApi } from 'schema_api';
-import { onMounted, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import EntityFilter from './EntityFilter.vue';
+import ClassFilter from './ClassFilter.vue';
 import ModeSwitcher from './ModeSwitcher.vue';
 import PartitionSelector from './PartitionSelector.vue';
 import { loadingState } from '@/providers/loading_state_provider';
@@ -81,6 +93,10 @@ const errorMessage = ref('');
 const noSchemaSelectedMessage = ref('')
 
 const route = useRoute();
+
+const isLegacy = computed(() => {
+    return ['schema', 'filtered-schema', 'partitioned-schema'].includes(route.name?.toString() || 'not-found')
+})
 
 async function performExport() {
     let jsonString = await importExportProvider.performExport();
@@ -150,9 +166,21 @@ async function performApiFetch() {
                 }
             }
         }
-    } else if (route.name == 'schema-annotation') {
+    } else if (["schema-annotation", "linkml-schema"].includes(route.name?.toString() || '')) {
         try {
             await cachedClassProvider.value.fetchClasses(route.params.schemaId);
+            // cachedClassProvider.value.fetchClassesDebounced(route.params.schemaId);
+        } catch (ex) {
+            if (ex instanceof FetchError) {
+                errorMessage.value = 'Could not fetch classes for schema'
+                loadingState.value = false
+            } else {
+                throw ex;
+            }
+        }
+    } else if (route.name == 'filtered-linkml-schema') {
+        try {
+            await cachedClassProvider.value.fetchFilteredClasses(route.params.schemaId, []);
             // cachedClassProvider.value.fetchClassesDebounced(route.params.schemaId);
         } catch (ex) {
             if (ex instanceof FetchError) {

@@ -2,7 +2,7 @@ import { ClassDefinitionView, Configuration, EnhancementApi, Entity, EntityApi, 
 import { SelectionProvider } from '@/fairlead/logic-presets/classic/controls'
 import { reactive, ref, watch } from "vue";
 import { entityGenerationSettings } from "./entity_generation_settings_provider";
-import { useDebounceFn, UseDebounceFnReturn } from "./util";
+import { deferedPromise, DeferredPromiseType, Mutex, useDebounceFn, UseDebounceFnReturn } from "./util";
 import { useRoute } from "vue-router";
 
 export class SchemaProvider implements SelectionProvider<Schema> {
@@ -20,6 +20,13 @@ export class SchemaProvider implements SelectionProvider<Schema> {
                 label: schema.id || '',
                 value: schema
             }
+        })
+    }
+
+    async fetchSelectionLabels() {
+        let schemas = await this.schemaApi.getAllSchemas()
+        return schemas.map(schema => {
+            return schema.id || ''
         })
     }
 
@@ -79,37 +86,113 @@ export class ClassProvider {
         console.trace('Starting fetch of classes')
         return (await this.schemaApi.getClassesBySchemaRaw({schemaId: this.schemaId, ...entityGenerationSettings})).value();
     }
+
+    async fetchFiltered(selectedClasses: string[]) {
+        return (await this.schemaApi.getClassesBySchemaRaw({schemaId: this.schemaId, classFilter: selectedClasses, ...entityGenerationSettings})).value();
+    } 
 }
 
 
 class CachedClassProvider {
+    
+    requestSentFor: Map<string, DeferredPromiseType<void>>;
+    filteredRequestSentFor: Map<string, DeferredPromiseType<void>>;
+
+    classesSchema: string = "";
+    filteredClassesSchema: string = "";
+
     classes: ClassDefinitionView[];
-    debouncedFetch: UseDebounceFnReturn<(schemaId: string) => Promise<void>>;
+    filteredClasses: ClassDefinitionView[];
+
+    private _mutex: Mutex;
+    // debouncedFetch: UseDebounceFnReturn<(schemaId: string) => Promise<void>>;
 
     constructor() {
+        this.requestSentFor = new Map<string, DeferredPromiseType<void>>();
+        this.filteredRequestSentFor = new Map<string, DeferredPromiseType<void>>();
         this.classes = [];
-        this.debouncedFetch = useDebounceFn(async (schemaId: string) => {
-            const classProvider = new ClassProvider(schemaId);
-            this.classes = await classProvider.fetch();
-            const x = 42;
-        }, 500, {maxWait: 3000, rejectOnCancel: false});
+        this.filteredClasses = [];
+        this._mutex = new Mutex();
+        // this.debouncedFetch = useDebounceFn(async (schemaId: string) => {
+        //     const classProvider = new ClassProvider(schemaId);
+        //     this.classes = await classProvider.fetch();
+        //     const x = 42;
+        // }, 500, {maxWait: 3000, rejectOnCancel: false});
     }
 
     async fetchClasses(schemaId: string) {
+        
+        const release = await this._mutex.lock();
+        let promise: DeferredPromiseType;
+        try {
+            if (this.requestSentFor.has(schemaId)) return await this.requestSentFor.get(schemaId);
+            promise = deferedPromise();
+            this.requestSentFor.set(schemaId, promise);
+        } finally {
+            release();
+        }
+
         const classProvider = new ClassProvider(schemaId);
         this.classes = await classProvider.fetch();
+        this.requestSentFor.delete(schemaId);
+        this.classesSchema = schemaId;
+        promise.resolve();
     }
 
-    async fetchClassesDebounced(schemaId: string) {
-        await this.debouncedFetch(schemaId);
-        const _ = 42;
+    async fetchFilteredClasses(schemaId: string, selectedClasses: string[]) {
+        const release = await this._mutex.lock();
+        let promise: DeferredPromiseType;
+        try {
+            if (this.filteredRequestSentFor.has(schemaId)) return this.filteredRequestSentFor.get(schemaId);
+            promise = deferedPromise();
+            this.filteredRequestSentFor.set(schemaId, promise);
+        } finally {
+            release();
+        }
+
+        const classProvider = new ClassProvider(schemaId);
+        if (!selectedClasses || selectedClasses.length == 0) {
+            this.filteredClasses = [];
+        } else {
+            this.filteredClasses = await classProvider.fetchFiltered(selectedClasses);
+        }
+        this.filteredRequestSentFor.delete(schemaId);
+        this.filteredClassesSchema = schemaId;
+        promise.resolve();
     }
+
+    // async fetchClassesDebounced(schemaId: string) {
+    //     await this.debouncedFetch(schemaId);
+    //     const _ = 42;
+    // }
 }
 
 const cachedClassProvider = ref(new CachedClassProvider());
 
 export {
     cachedClassProvider
+}
+
+
+export class ClassSelectionProvider implements SelectionProvider<ClassDefinitionView> {
+    constructor(private schemaId: string) {}
+
+    async fetchSelectionOptions() {
+        await cachedClassProvider.value.fetchClasses(this.schemaId);
+        const classes = cachedClassProvider.value.classes;
+        return classes.map((x) => {
+            return {
+                label: x.name,
+                value: x
+            }
+        });
+    }
+
+    async fetchSelectionLabels() {
+        await cachedClassProvider.value.fetchClasses(this.schemaId);
+        const classes = cachedClassProvider.value.classes;
+        return classes.map((x) => x.name);
+    }
 }
 
 
@@ -120,30 +203,30 @@ watch(() => cachedClassProvider.value.classes, (newClasses, oldClasses) => {
 export { classNameList }
 
 
-const legacyEntityNameList = ref<string[]>([]);
-const route = useRoute();
+// const legacyEntityNameList = ref<string[]>([]);
+// const route = useRoute();
 
-watch(async () => route.fullPath, async (newPath, oldPath) => {
-    if (route.name != 'not-found') {
-        if (route.name == 'filtered-schema') {
-            const provider = new SchemaEntityProvider(route.params.schemaId)
-            legacyEntityNameList.value = await provider.fetchSelectionLabels()
-        }
-    }
-})
+// watch(() => route.fullPath, async (newPath, oldPath) => {
+//     if (route.name != 'not-found') {
+//         if (route.name == 'filtered-schema') {
+//             const provider = new SchemaEntityProvider(route.params.schemaId)
+//             legacyEntityNameList.value = await provider.fetchSelectionLabels()
+//         }
+//     }
+// })
 
 
-const routeSensitiveClassNameList = ref<string[]>([]);
-watch([legacyEntityNameList, classNameList], () => {
-    if (route.name == 'filtered-schema') {
-        routeSensitiveClassNameList.value = legacyEntityNameList.value;
-    } else if (route.name == 'filtered-linkml-schema') {
-        routeSensitiveClassNameList.value = classNameList.value;
-    } else {
-        routeSensitiveClassNameList.value = [];
-    }
-})
-export { routeSensitiveClassNameList }
+// const routeSensitiveClassNameList = ref<string[]>([]);
+// watch([legacyEntityNameList, classNameList], () => {
+//     if (route.name == 'filtered-schema') {
+//         routeSensitiveClassNameList.value = legacyEntityNameList.value;
+//     } else if (route.name == 'filtered-linkml-schema') {
+//         routeSensitiveClassNameList.value = classNameList.value;
+//     } else {
+//         routeSensitiveClassNameList.value = [];
+//     }
+// })
+// export { routeSensitiveClassNameList }
 
 
 

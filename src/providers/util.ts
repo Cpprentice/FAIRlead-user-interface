@@ -119,3 +119,90 @@ export function useDebounceFn<T extends FunctionArgs>(
     fn,
   )
 }
+
+
+
+
+
+// copilot code
+// My comment: This feels like just moving the this.locked from whatever check I had beforehand. However, the code inside
+//  the lock function seems to have no async elements and runs synchronously. So as long as the scheduler does not arbitrarily
+//  preempt the execution in there we should effectively get a proper mutex mechanic. The if check inside the async function to
+//  produce either a way or a perform action seems to be okay
+export class Mutex {
+  private locked = false;
+  private waiters: (() => void)[] = [];
+
+  async lock(): Promise<() => void> {
+    if (!this.locked) {
+      this.locked = true;
+      return () => this.unlock();
+    }
+
+    return new Promise(resolve => {
+      this.waiters.push(() => {
+        this.locked = true;
+        resolve(() => this.unlock());
+      });
+    });
+  }
+
+  private unlock() {
+    const next = this.waiters.shift();
+    if (next) {
+      next();
+    } else {
+      this.locked = false;
+    }
+  }
+}
+
+
+
+
+
+// deferred promise implementation from lea.verou.me/blog/2016/12/...
+
+export type ResolveType<T> = (value: T) => void
+export type RejectType = (reason: any) => void
+// export type DeferredPromiseType<T> {
+//   promise: Promise<T> | null
+//   resolve: ResolveType<T> | null
+//   reject: RejectType | null
+// }
+
+
+export type DeferredPromiseType<T = void> = Promise<T> & {
+  resolve: ResolveType<T>,
+  reject: RejectType
+}
+
+
+export function deferedPromise<T = void>(): DeferredPromiseType<T> {
+
+  let res!: ResolveType<T>;
+  let rej!: RejectType;
+
+  // let deferred: DeferredPromiseType<T> = {
+  //   promise: null,
+  //   resolve: null,
+  //   reject: null
+  // }
+
+  // the constructor callback is called synchronously so the use of the ! in the res and rej definition is fine
+  let promise = new Promise<T>((resolve, reject) => {
+    res = resolve;
+    rej = reject;
+  }) as DeferredPromiseType<T>;
+
+  // deferred.promise = new Promise<T>((resolve, reject) => {
+  //   deferred.resolve = resolve;
+  //   deferred.reject = reject;
+  // })
+  promise.resolve = res;
+  promise.reject = rej;
+  return promise;
+
+  // return deferred;
+}
+

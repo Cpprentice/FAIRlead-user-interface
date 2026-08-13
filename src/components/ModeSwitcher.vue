@@ -7,10 +7,10 @@
             @update:model-value="navigate"
         >
             <v-btn icon="mdi-graph" value="schema"></v-btn>
-            <v-btn icon="mdi-graph" value="linkml-schema"></v-btn>
+            <v-btn icon="mdi-graph-outline" value="linkml-schema"></v-btn>
             <v-btn icon="mdi-star-plus-outline" value="schema-annotation"></v-btn>
             <v-btn icon="mdi-filter" value="filtered-schema"></v-btn>
-            <v-btn icon="mdi-filter" value="filtered-linkml-schema"></v-btn>
+            <v-btn icon="mdi-filter-outline" value="filtered-linkml-schema"></v-btn>
             <v-btn icon="mdi-chart-box-multiple" value="partitioned-schema"></v-btn>
         </v-btn-toggle>
     </div>

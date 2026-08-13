@@ -17,6 +17,7 @@ type SelectionOption<T> = {
 
 export type SelectionProvider<T> = {
     fetchSelectionOptions: () => Promise<SelectionOption<T>[]>
+    fetchSelectionLabels: () => Promise<string[]>
 }
 
 export abstract class FairLeadControl<T> extends ReteTypes.Control {

@@ -68,6 +68,7 @@
     <v-alert v-if="errorMessage" class="error-box" prominent border="bottom" color="red" elevation="9" type="error">{{ errorMessage }}</v-alert>
     <v-alert v-if="noSchemaSelectedMessage" class="error-box" prominent border="bottom" color="green" elevation="9">{{ noSchemaSelectedMessage }}</v-alert>
     <v-progress-circular class="loading-wheel" color="teal-darken-4" indeterminate :size="128" :width="12" v-if="loadingState"></v-progress-circular>
+    <notification-display></notification-display>
 </template>
 
 <script setup lang="ts">
@@ -79,11 +80,13 @@ import EntityFilter from './EntityFilter.vue';
 import ClassFilter from './ClassFilter.vue';
 import ModeSwitcher from './ModeSwitcher.vue';
 import PartitionSelector from './PartitionSelector.vue';
+import NotificationDisplay from './NotificationDisplay.vue';
 import { loadingState } from '@/providers/loading_state_provider';
 import ApiSettingsSelector from './ApiSettingsSelector.vue';
 import { importExportProvider } from '@/providers/import_export_provider';
 import TestDialog from './TestDialog.vue';
 import DownloadControls from './DownloadControls.vue';
+import { useNotifications } from '@/providers/notifications.js';
 
 
 const schemaChoices = ref([]);
@@ -91,6 +94,7 @@ const drawer = ref(false);
 const settingsDrawer = ref(false);
 const errorMessage = ref('');
 const noSchemaSelectedMessage = ref('')
+const { addError } = useNotifications();
 
 const route = useRoute();
 
@@ -132,7 +136,7 @@ async function downloadLinkML() {
 
 async function performApiFetch() {
 
-    if (route.name == 'not-found') {
+    if (route.name == 'not-found' || route.name == undefined) {
         noSchemaSelectedMessage.value = 'Please select a schema'
     } else {
         noSchemaSelectedMessage.value = ''

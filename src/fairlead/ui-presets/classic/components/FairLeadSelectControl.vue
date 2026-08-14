@@ -21,10 +21,18 @@ v-select(
 </template>
 
 <script>
+import { useNotifications } from '@/providers/notifications';
+import { FetchError } from 'schema_api';
 import { defineComponent } from 'vue'
 
 export default defineComponent({
     props: ['data'],
+    setup() {
+        const { addError } = useNotifications();
+        return {
+            addError
+        }
+    },
     methods: {
         change(e) {
             // let value = undefined;
@@ -33,7 +41,12 @@ export default defineComponent({
             this.data.setValue(e)
         },
         async load() {
-            this.items = await this.data.provider.fetchSelectionOptions()
+            try {
+                this.items = await this.data.provider.fetchSelectionOptions()
+            } catch (error) {
+                const message = error instanceof FetchError ? error.message : String(error);
+                this.addError(message)
+            }
         }
     },
     mounted() {

@@ -22,7 +22,8 @@ export type FairLeadCustomEmitMessage = {
 type CustomEventCallback = (payload: any) => void;
 
 abstract class FairLeadNode extends ReteTypes.Node {
-    subLabel: string = '';
+
+    subLabels: string[] = [];
     abstract nodeType: string;
     private customEventHandlers: Map<string, CustomEventCallback> = new Map();
     
@@ -33,6 +34,8 @@ abstract class FairLeadNode extends ReteTypes.Node {
         
         if (Object.keys(this.controls).length > 0) height += 48; // header with settings button
         else height += 44; // header without settings button
+
+        height += Object.keys(this.subLabels).length * 32; // Additional header row
 
         height += Object.keys(this.inputs).length * 36;
         height += Object.keys(this.outputs).length * 36;
@@ -45,7 +48,8 @@ abstract class FairLeadNode extends ReteTypes.Node {
         let combinedList = [
             ...Object.values(this.outputs).map(x => x.label.length * 1.4),
             ...Object.values(this.inputs).map(x => x.label.length * 1.4),
-            Math.floor((this.label + this.subLabel).length * 1.6)
+            Math.floor(this.label.length * 1.6),
+            ...Object.values(this.subLabels).map(x => x.length * 1.6)
         ]
         // return Math.max(...combinedList.map(str => str.length));
         return Math.max(...combinedList);
@@ -146,7 +150,7 @@ export class EntityNode extends FairLeadNode implements DataflowNode {
     }
 
     async selectSchema(value?: {label: string, value: Schema }) {
-        this.subLabel = '';
+        this.subLabels = [];
         this.deleteOutputs(Object.keys(this.outputs))
         this.removeControl('entity');
         this.entityProvider = undefined;
@@ -155,17 +159,18 @@ export class EntityNode extends FairLeadNode implements DataflowNode {
             // a real schema was selected
             this.entityProvider = new SchemaEntityProvider(value?.label || '')
             this.addControl('entity', new FairLeadSelectControl(this.entityProvider, { change: this.selectEntity.bind(this) }))
+            this.subLabels.push(value?.label || '')
         }
 
         this.options.updateUiComponent("node", this.id);
     }
 
     async selectEntity(value?: {label: string, value: Entity }) {
-        this.subLabel = '';
+        this.subLabels = this.subLabels.slice(0, 1);
         this.deleteOutputs(Object.keys(this.outputs))
         if (value ?? false) {
             // a real entity was selected
-            this.subLabel = value?.label || '';
+            this.subLabels.push(value?.label || '');
             for (let relation of value?.value.isSubjectInRelation || []) {
                 const name = relation.relationName[0];
                 this.addOutput(name, new ReteTypes.Output(streamSocket, name))
@@ -202,12 +207,12 @@ export class SchemaNode extends FairLeadNode implements DataflowNode {
     }
   
     async updateSelection(value?: {label: string, value: Schema }) {
-        this.subLabel = '';
+        this.subLabels = [];
         this.deleteOutputs(Object.keys(this.outputs))
       
 
         if (value ?? false) {
-            this.subLabel = value?.label || '';
+            this.subLabels.push(value?.label || '');
             let entityProvider = new EntityProvider(value?.value.id || '')
             let entities = await entityProvider.fetch();
         

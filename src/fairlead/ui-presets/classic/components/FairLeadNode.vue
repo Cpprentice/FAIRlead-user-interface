@@ -3,7 +3,7 @@
     .title(data-testid="title")
         v-row
           v-col.justify-space-between.align-self-center
-            span {{nodeTitle}}
+            span {{data.label}}
           v-col.justify-space-between.v-col-auto
             v-dialog(max-width="500")
               template(v-slot:activator="{ props: activatorProps }")
@@ -36,6 +36,9 @@
                       text="Close Dialog"
                       @click="isActive.value = false"
                     )
+        v-row(v-for='label in data.subLabels')
+          v-col.justify-space-between.align-self-center.pt-0
+            span {{label}}
 
     // Outputs
     .output(v-for='[key, output] in outputs()' :key="'output' + key + seed" :data-testid="'output-'+key")
@@ -117,12 +120,12 @@ export default defineComponent({
       settingDialogHeader() {
         return `${this.data.label} - Settings`
       },
-      nodeTitle() {
-        if (this.data.subLabel ?? false) {
-          return `${this.data.label} - ${this.data.subLabel}`
-        }
-        return this.data.label
-      }
+      // nodeTitle() {
+      //   if (this.data.subLabel ?? false) {
+      //     return `${this.data.label} - ${this.data.subLabel}`
+      //   }
+      //   return this.data.label
+      // }
     }
 })
 </script>

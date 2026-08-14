@@ -195,7 +195,7 @@ async function performApiFetch() {
 
 watch(() => route.fullPath, async (newPath, oldPath) => {
     await performApiFetch()
-})
+}, {immediate: true})
 
 // watch(() => route.name, async (newRouteName, oldRouteName) => {
 //     await performApiFetch(route.params.schemaId, newRouteName == 'partitioned-schema')

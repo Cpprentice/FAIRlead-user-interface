@@ -1,7 +1,7 @@
 <template>
     <FairLeadNode v-bind="props">
         <template #output-actions="{ item }">
-            <v-btn density="compact" icon="mdi-pencil" size="small" @click="editOutput(item)" @pointerdown.stop=""></v-btn>
+            <v-icon-btn density="compact" icon="mdi-pencil" size="small" @click="editOutput(item)" @pointerdown.stop=""></v-icon-btn>
             <!--<v-dialog max-width="500">
                 <template v-slot:activator="{ props: activatorProps }">
                     <v-btn density="compact" icon="mdi-pencil" size="small" v-bind="activatorProps" @pointerdown.stop=""></v-btn>
@@ -23,14 +23,14 @@
         <template #output-markers="{ item }">
             <v-tooltip interactive location="bottom" v-if="showAnnotationMarker(item)">
                 <template #activator="{ props }">
-                    <v-btn  density="compact" icon="mdi-tag-text-outline" size="small" v-bind="props" class="ml-1"></v-btn>
+                    <v-icon-btn  density="compact" icon="mdi-tag-text-outline" size="small" v-bind="props" class="ml-1"></v-icon-btn>
                 </template>
                 <terminology-display v-for="annotation in item.ref?.[1].annotations" :iri="annotation.iri"></terminology-display>
                 <!--<a v-for="annotation in item.ref?.[1].annotations" :href="annotation.iri" target="_blank" class="text-primary font-weight-medium mx-1">{{ annotation.label || "Term" }}</a>-->
             </v-tooltip>
             <v-tooltip interactive location="bottom" v-if="showUnitMarker(item)">
                 <template #activator="{ props }">
-                    <v-btn  density="compact" icon="mdi-ruler" size="small" v-bind="props" class="ml-1"></v-btn>
+                    <v-icon-btn  density="compact" icon="mdi-ruler" size="small" v-bind="props" class="ml-1"></v-icon-btn>
                 </template>
                 <a :href="item.ref?.[1].unit?.id" target="_blank" class="text-primary font-weight-medium">{{ item.ref?.[1].unit?.description }}</a>
             </v-tooltip>

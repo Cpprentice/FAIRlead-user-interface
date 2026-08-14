@@ -2,9 +2,9 @@
 .node(:class="[{ selected: data.selected }, data.label.toLowerCase(), data.size ]" :style="nodeStyles()" data-testid="node")
     .title(data-testid="title")
         v-row
-          v-col.justify-space-between.align-self-center
+          v-col
             span {{data.label}}
-          v-col.justify-space-between.v-col-auto
+          v-col(cols="auto")
             v-dialog(max-width="500")
               template(v-slot:activator="{ props: activatorProps }")
                 v-btn(
@@ -36,8 +36,8 @@
                       text="Close Dialog"
                       @click="isActive.value = false"
                     )
-        v-row(v-for='label in data.subLabels')
-          v-col.justify-space-between.align-self-center.pt-0
+        v-row(v-for='label in data.subLabels' gap="8")
+          v-col
             span {{label}}
 
     // Outputs

@@ -24,7 +24,7 @@
     >
       <v-list
         nav
-        dense
+        density="compact"
         
       ><!--@update:selected="selected"-->
           <v-list-item title="LinkML" subtitle="section"></v-list-item>

@@ -12,7 +12,7 @@
       <div class="rete-nav-drawer permanent-drawer">
         <v-list
           nav
-          dense
+          density="compact"
         ><!--@update:selected="selected"-->
           <annotation-stats></annotation-stats>
           <v-list-item title="Automated Tuning" subtitle="section"></v-list-item>

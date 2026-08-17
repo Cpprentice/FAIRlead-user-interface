@@ -1,11 +1,10 @@
 <template>
     <v-snackbar-queue
         v-model="messages"
-        
+        :total-visible="3"
         :closable="true"
         :timeout="4000">
     </v-snackbar-queue>
-    <!--:total-visible="3" starts to be supported in vuetify 4.0-->
 </template>
 
 <script lang="ts" setup>

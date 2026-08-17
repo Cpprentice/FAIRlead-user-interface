@@ -1,3 +1,4 @@
+import { FetchError } from "schema_api";
 import { ref } from "vue";
 
 
@@ -10,8 +11,8 @@ interface Message {
 interface PromiseMessage {
     text: string
     promise: Promise<any>
-    success: () => Message
-    error: () => Message
+    success: (val: unknown) => Message | null
+    error: (val: Error) => Message | null
 }
 
 
@@ -44,16 +45,19 @@ export function useNotifications() {
     }
 
 
-    function onResolve() {
+    function onResolve(arg: unknown) {
+        console.log('resolve', arg)
+        return null;
         return {
             text: 'Promise resolved',
             color: 'success'
         }
     }
 
-    function onReject() {
+    function onReject(error: Error) {
+        const message = error instanceof FetchError ? error.message : String(error);
         return {
-            text: 'Promise rejected',
+            text: message,
             color: 'error'
         }
     }
@@ -67,6 +71,11 @@ export function useNotifications() {
         })
     }
 
-    return {messages, addError, addInfo, addSuccess, addPromise}
+    function trackPromise<T>(text: string, promise: Promise<T>): Promise<T> {
+        addPromise(text, promise)
+        return promise
+    }
+
+    return {messages, addError, addInfo, addSuccess, addPromise, trackPromise}
 
 }

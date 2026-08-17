@@ -28,9 +28,9 @@ import { defineComponent } from 'vue'
 export default defineComponent({
     props: ['data'],
     setup() {
-        const { addError } = useNotifications();
+        const { trackPromise } = useNotifications();
         return {
-            addError
+            trackPromise
         }
     },
     methods: {
@@ -41,12 +41,13 @@ export default defineComponent({
             this.data.setValue(e)
         },
         async load() {
-            try {
-                this.items = await this.data.provider.fetchSelectionOptions()
-            } catch (error) {
-                const message = error instanceof FetchError ? error.message : String(error);
-                this.addError(message)
-            }
+            this.items = await this.trackPromise("fetching options", this.data.provider.fetchSelectionOptions())
+            // try {
+            //     this.items = await this.data.provider.fetchSelectionOptions()
+            // } catch (error) {
+            //     const message = error instanceof FetchError ? error.message : String(error);
+            //     this.addError(message)
+            // }
         }
     },
     mounted() {

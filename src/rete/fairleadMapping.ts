@@ -25,16 +25,19 @@ import { Classic as FairLeadClassicUiPreset } from '../fairlead/ui-presets'
 import { Classic as FairLeadClassicLogicPreset } from '../fairlead/logic-presets'
 import vuetify from '@/plugins/vuetify';
 import { createApp } from 'vue';
-import { EntityNode, FairLeadNodeOptions, SchemaNode } from '@/fairlead/logic-presets/classic/nodes';
+import { ClassNode, EntityNode, FairLeadNodeOptions, GetSchemaNode, SchemaNode, FairLeadNode, GetSlotsNode } from '@/fairlead/logic-presets/classic/nodes';
 import { EntityProvider, SchemaProvider } from '@/providers/schema_api';
 import { ImportExportInterface, importExportProvider } from '@/providers/import_export_provider';
 // import { CorrectionApi, Entity } from 'schema_api';
 
 // type Node = TextNode | FileNode | DataSourceNode | EntityNode | SchemaNode<AreaPlugin<any>>;
-type Node = EntityNode | SchemaNode;
+type Node = EntityNode | SchemaNode | ClassNode | GetSchemaNode | GetSlotsNode;
 type Conn =
   | Connection<EntityNode, EntityNode>
   | Connection<SchemaNode, EntityNode>
+  | Connection<SchemaNode, ClassNode>
+  | Connection<GetSchemaNode, ClassNode>
+  | Connection<ClassNode, GetSlotsNode>
 type Schemes = GetSchemes<Node, Conn>;
 
 class Connection<A extends Node, B extends Node> extends Classic.Connection<
@@ -48,9 +51,9 @@ type AreaExtra =
   | ContextMenuExtra
   | MinimapExtra;
 
-const socket = new Classic.Socket('socket');
-const entitySocket = new Classic.Socket('entity');
-const streamSocket = new Classic.Socket('stream');
+// const socket = new Classic.Socket('socket');
+// const entitySocket = new Classic.Socket('entity');
+// const streamSocket = new Classic.Socket('stream');
 
 function getStringIndex(input_string: string, search_string: string, occurrence: number = 0) {
   return input_string.split(search_string, occurrence).join(search_string).length;
@@ -85,6 +88,9 @@ export async function createEditor(container: HTMLElement, mappingName: string, 
     items: ContextMenuPresets.classic.setup([
       ['Entity', () => new EntityNode(fairleadOptions)],
       ['Schema', () => new SchemaNode(fairleadOptions)],
+      ['Class', () => new ClassNode(fairleadOptions)],
+      ['GetSchema', () => new GetSchemaNode(fairleadOptions)],
+      ['GetSlots', () => new GetSlotsNode(fairleadOptions)]
     ]),
   });
   const minimap = new MinimapPlugin<Schemes>();
@@ -172,6 +178,101 @@ export async function createEditor(container: HTMLElement, mappingName: string, 
     ) {
       process();
     }
+
+    let callbackOutputs = [];
+
+    if (context.type === 'connectioncreated') {
+      let sourceNode = editor.getNode(context.data.source) as FairLeadNode;
+      let targetNode = editor.getNode(context.data.target) as FairLeadNode;
+      callbackOutputs.push(sourceNode.customEmitHandler({
+        type: "output/connectioncreated",
+        payload: {
+          outputName: context.data.sourceOutput,
+          inputName: context.data.targetInput,
+          targetNode: targetNode,
+          connectionId: context.data.id
+        }
+      }));
+      callbackOutputs.push(targetNode.customEmitHandler({
+        type: "input/connectioncreated",
+        payload: {
+          outputName: context.data.sourceOutput,
+          inputName: context.data.targetInput,
+          sourceNode: sourceNode,
+          connectionId: context.data.id
+        }
+      }));
+    } else if (context.type === 'connectionremoved') {
+      let sourceNode = editor.getNode(context.data.source) as FairLeadNode;
+      let targetNode = editor.getNode(context.data.target) as FairLeadNode;
+      callbackOutputs.push(sourceNode.customEmitHandler({
+        type: "output/connectionremoved",
+        payload: {
+          outputName: context.data.sourceOutput,
+          inputName: context.data.targetInput,
+          targetNode: targetNode,
+          connectionId: context.data.id
+        }
+      }));
+      callbackOutputs.push(targetNode.customEmitHandler({
+        type: "input/connectionremoved",
+        payload: {
+          outputName: context.data.sourceOutput,
+          inputName: context.data.targetInput,
+          sourceNode: sourceNode,
+          connectionId: context.data.id
+        }
+      }));
+    } else if (context.type == 'connectioncreate') {
+      let sourceNode = editor.getNode(context.data.source) as FairLeadNode;
+      let targetNode = editor.getNode(context.data.target) as FairLeadNode;
+      callbackOutputs.push(sourceNode.customEmitHandler({
+        type: "output/connectioncreate",
+        payload: {
+          outputName: context.data.sourceOutput,
+          inputName: context.data.targetInput,
+          targetNode: targetNode,
+          connectionId: context.data.id
+        }
+      }));
+      callbackOutputs.push(targetNode.customEmitHandler({
+        type: "input/connectioncreate",
+        payload: {
+          outputName: context.data.sourceOutput,
+          inputName: context.data.targetInput,
+          sourceNode: sourceNode,
+          connectionId: context.data.id
+        }
+      }));
+    } else if (context.type == 'connectionremove') {
+      let sourceNode = editor.getNode(context.data.source) as FairLeadNode;
+      let targetNode = editor.getNode(context.data.target) as FairLeadNode;
+      callbackOutputs.push(sourceNode.customEmitHandler({
+        type: "output/connectionremove",
+        payload: {
+          outputName: context.data.sourceOutput,
+          inputName: context.data.targetInput,
+          targetNode: targetNode,
+          connectionId: context.data.id
+        }
+      }));
+      callbackOutputs.push(targetNode.customEmitHandler({
+        type: "input/connectionremove",
+        payload: {
+          outputName: context.data.sourceOutput,
+          inputName: context.data.targetInput,
+          sourceNode: sourceNode,
+          connectionId: context.data.id
+        }
+      }));
+    }
+
+    callbackOutputs = callbackOutputs.filter(x => x !== undefined)  // keep only defined outputs
+
+    if (callbackOutputs.length > 0) {
+      return callbackOutputs[0]
+    }
+
     return context;
   });
 

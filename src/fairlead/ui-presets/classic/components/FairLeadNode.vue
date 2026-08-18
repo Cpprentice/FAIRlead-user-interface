@@ -13,8 +13,8 @@
                   size="x-small"
                   icon="mdi-cog-outline"
                   data-testid="settings-button"
-                  v-show="hasControl"
                 )
+                //- v-show="hasControl"
               template(v-slot:default="{ isActive }")
                 v-card(:title="settingDialogHeader")
                   v-card-text

@@ -63,8 +63,8 @@ importers:
         specifier: ^14.2.1
         version: 14.2.1(sass@1.83.4)
       schema_api:
-        specifier: file:C:/Development/it4edm/FAIRlead/schema-mapping-ui//../schema-apis/typescript/schema_api-0.8.0-SNAPSHOT.202605141336.tgz
-        version: file:../schema-apis/typescript/schema_api-0.8.0-SNAPSHOT.202605141336.tgz
+        specifier: file:C:/Development/it4edm/FAIRlead/schema-mapping-ui//../schema-apis/typescript/schema_api-0.8.0-SNAPSHOT.202608181009.tgz
+        version: file:../schema-apis/typescript/schema_api-0.8.0-SNAPSHOT.202608181009.tgz
       three:
         specifier: ^0.156.1
         version: 0.156.1
@@ -1190,9 +1190,9 @@ packages:
     engines: {node: '>=14.0.0'}
     hasBin: true
 
-  schema_api@file:../schema-apis/typescript/schema_api-0.8.0-SNAPSHOT.202605141336.tgz:
-    resolution: {integrity: sha512-BfvMue/DFiX+rg8CIITluRIIyJiIE4LRp6ProrFNz2TajZB+xt+GfLRy//49bCjGmFyEh7kxG7zXIqithkUpWw==, tarball: file:../schema-apis/typescript/schema_api-0.8.0-SNAPSHOT.202605141336.tgz}
-    version: 0.8.0-SNAPSHOT.202605141336
+  schema_api@file:../schema-apis/typescript/schema_api-0.8.0-SNAPSHOT.202608181009.tgz:
+    resolution: {integrity: sha512-UrGGVMb05NZLheqmm+N07vDiIreM1Pf9qvu1NHCuJBux79C0NkzGbrYr5NES/32yLKzi48+FxgBSugFNw9A+kA==, tarball: file:../schema-apis/typescript/schema_api-0.8.0-SNAPSHOT.202608181009.tgz}
+    version: 0.8.0-SNAPSHOT.202608181009
 
   semver@7.7.0:
     resolution: {integrity: sha512-DrfFnPzblFmNrIZzg5RzHegbiRWg7KMR7btwi2yjHwx06zsUbO5g613sVwEV7FTwmzJu+Io0lJe2GJ3LxqpvBQ==}
@@ -2407,7 +2407,7 @@ snapshots:
     optionalDependencies:
       '@parcel/watcher': 2.5.1
 
-  schema_api@file:../schema-apis/typescript/schema_api-0.8.0-SNAPSHOT.202605141336.tgz: {}
+  schema_api@file:../schema-apis/typescript/schema_api-0.8.0-SNAPSHOT.202608181009.tgz: {}
 
   semver@7.7.0: {}
 

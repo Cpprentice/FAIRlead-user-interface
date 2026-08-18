@@ -1,4 +1,4 @@
-import { ClassDefinitionView, Configuration, EnhancementApi, Entity, EntityApi, Partition, PartitionApi, Schema, SchemaApi } from "schema_api";
+import { ClassDefinitionView, Configuration, EnhancementApi, Entity, EntityApi, Partition, PartitionApi, Schema, SchemaApi, SlotDefinitionView } from "schema_api";
 import { SelectionProvider } from '@/fairlead/logic-presets/classic/controls'
 import { reactive, ref, watch } from "vue";
 import { entityGenerationSettings } from "./entity_generation_settings_provider";
@@ -35,6 +35,31 @@ export class SchemaProvider implements SelectionProvider<Schema> {
     }
 }
 
+export class SchemaClassProvider implements SelectionProvider<ClassDefinitionView> {
+    schemaApi: SchemaApi;
+
+    constructor(public schemaId: string) {
+        this.schemaApi = new SchemaApi();
+    }
+
+    async fetchSelectionOptions() {
+        let classes = await (await this.schemaApi.getClassesBySchemaRaw({schemaId: this.schemaId, ...entityGenerationSettings})).value();
+        return classes.map(cls => {
+            return {
+                label: cls.name,
+                value: cls
+            }
+        })
+    }
+
+    async fetchSelectionLabels() {
+        let classes = await (await this.schemaApi.getClassesBySchemaRaw({schemaId: this.schemaId, ...entityGenerationSettings})).value();
+        return classes.map(cls => cls.name);
+    }
+
+    
+}
+
 export class SchemaEntityProvider implements SelectionProvider<Entity> {
     entityApi: EntityApi;
 
@@ -55,6 +80,29 @@ export class SchemaEntityProvider implements SelectionProvider<Entity> {
     async fetchSelectionLabels() {
         let entities = await (await this.entityApi.getEntitiesBySchemaRaw({schemaId: this.schemaId, ...entityGenerationSettings})).value();
         return entities.map(entity => entity.entityName[0])
+    }
+}
+
+export class SchemaSlotProvider implements SelectionProvider<SlotDefinitionView> {
+    schemaApi: SchemaApi;
+
+    constructor(public schemaId: string, public classId: string) {
+        this.schemaApi = new SchemaApi();
+    }
+
+    async fetchSelectionOptions() {
+        let slots = await (await this.schemaApi.getSlotsBySchemaAndClassRaw({schemaId: this.schemaId, classId: this.classId, ...entityGenerationSettings})).value();
+        return slots.map(slot => {
+            return {
+                label: slot.name,
+                value: slot
+            }
+        })
+    }
+
+    async fetchSelectionLabels() {
+        let slots = await (await this.schemaApi.getSlotsBySchemaAndClassRaw({schemaId: this.schemaId, classId: this.classId, ...entityGenerationSettings})).value();
+        return slots.map(slot => slot.name)
     }
 }
 

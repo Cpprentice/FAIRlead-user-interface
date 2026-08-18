@@ -17,8 +17,10 @@ import {
 } from 'rete-context-menu-plugin';
 import { MinimapExtra, MinimapPlugin } from 'rete-minimap-plugin';
 import {
+  ClassicFlow,
   ConnectionPlugin,
   Presets as ConnectionPresets,
+  getSourceTarget,
 } from 'rete-connection-plugin';
 
 import { Classic as FairLeadClassicUiPreset } from '../fairlead/ui-presets'
@@ -66,7 +68,28 @@ function getEntityIdFromUrl(url_string: string) {
 }
 
 
+type Sockets = Classic.Socket;
+type Input = Classic.Input<Sockets>;
+type Output = Classic.Output<Sockets>;
 
+function getConnectionSockets(
+  editor: NodeEditor<Schemes>,
+  connection: Schemes["Connection"]
+) {
+  const source = editor.getNode(connection.source);
+  const target = editor.getNode(connection.target);
+
+  const output =
+    source &&
+    (source.outputs as Record<string, Input>)[connection.sourceOutput];
+  const input =
+    target && (target.inputs as Record<string, Output>)[connection.targetInput];
+
+  return {
+    source: output?.socket,
+    target: input?.socket
+  };
+}
 
 
 export async function createEditor(container: HTMLElement, mappingName: string, mapping: string[]) {
@@ -103,7 +126,37 @@ export async function createEditor(container: HTMLElement, mappingName: string, 
   area.use(vueRender);
 
   area.use(connection);
-  connection.addPreset(ConnectionPresets.classic.setup());
+  // connection.addPreset(ConnectionPresets.classic.setup());
+  connection.addPreset(
+    () =>
+      new ClassicFlow({
+        canMakeConnection(from, to) {
+          // this function checks if the old connection should be removed
+          const [source, target] = getSourceTarget(from, to) || [null, null];
+
+          if (!source || !target || from === to) return false;
+
+          const sockets = getConnectionSockets(
+            editor,
+            new Connection(
+              editor.getNode(source.nodeId),
+              source.key as never,
+              editor.getNode(target.nodeId),
+              target.key as never
+            )
+          );
+          console.log(sockets);
+
+          if (sockets.source?.name !== sockets.target?.name) {
+            console.log("Sockets are not compatible", "error");
+            connection.drop();
+            return false;
+          }
+
+          return Boolean(source && target);
+        }
+      })
+  );
 
   area.use(contextMenu);
   area.use(minimap);

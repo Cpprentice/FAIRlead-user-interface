@@ -1,7 +1,15 @@
 import { ClassicPreset as ReteTypes } from 'rete';
 
-export const streamSocket = new ReteTypes.Socket('stream');
-export const attributeSocket = new ReteTypes.Socket('attribute');
-export const schemaSocket = new ReteTypes.Socket('schema');
-export const classSocket = new ReteTypes.Socket('class');
-export const slotSocket = new ReteTypes.Socket('slot');
+class FairLeadSocket extends ReteTypes.Socket {
+    locked: boolean
+    constructor(name: string) {
+        super(name);
+        this.locked = false;
+    }
+}
+
+export const streamSocket = new FairLeadSocket('stream');
+export const attributeSocket = new FairLeadSocket('attribute');
+export const schemaSocket = new FairLeadSocket('schema');
+export const classSocket = new FairLeadSocket('class');
+export const slotSocket = new FairLeadSocket('slot');

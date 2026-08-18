@@ -44,4 +44,16 @@ export default {
 .socket.attribute {
     background: $socket-color-attribute;
 }
+
+.socket.schema {
+    background: $socket-color-schema;
+}
+
+.socket.class {
+    background: $socket-color-class;
+}
+
+.socket.slot {
+    background: $socket-color-slot;
+}
 </style>

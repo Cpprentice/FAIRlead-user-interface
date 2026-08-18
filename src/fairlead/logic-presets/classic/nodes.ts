@@ -1,10 +1,10 @@
 import { ClassicPreset as ReteTypes, GetSchemes, NodeEditor, BaseSchemes, ConnectionBase, NodeBase } from 'rete';
 import { AreaPlugin } from 'rete-area-plugin';
 import { DataflowNode } from 'rete-engine';
-import { FairLeadSelectControl, FairLeadTextControl, FairLeadDividerControl, FairLeadControl } from './controls';
+import { FairLeadSelectControl, FairLeadTextControl, FairLeadDividerControl, FairLeadControl, SelectOption, SelectionProvider } from './controls';
 import { ClassDefinitionView, CorrectionApi, Entity, Schema, SchemaApi, SlotDefinitionView } from 'schema_api';
-import { EntityProvider, SchemaEntityProvider, SchemaProvider } from '@/providers/schema_api';
-import { attributeSocket, streamSocket } from './sockets';
+import { ClassProvider, EntityProvider, SchemaClassProvider, SchemaEntityProvider, SchemaProvider, SchemaSlotProvider } from '@/providers/schema_api';
+import { attributeSocket, classSocket, schemaSocket, slotSocket, streamSocket } from './sockets';
 import { FairleadOutput } from './outputs';
 import { reteSettings } from '@/providers/rete_settings_provider';
 
@@ -21,7 +21,7 @@ export type FairLeadCustomEmitMessage = {
 }
 type CustomEventCallback = (payload: any) => void;
 
-abstract class FairLeadNode extends ReteTypes.Node {
+export abstract class FairLeadNode extends ReteTypes.Node {
 
     subLabels: string[] = [];
     abstract nodeType: string;
@@ -107,7 +107,7 @@ abstract class FairLeadNode extends ReteTypes.Node {
     customEmitHandler(message: FairLeadCustomEmitMessage) {
         let callback = this.customEventHandlers.get(message.type)
         if (callback) {
-            callback(message.payload)
+            return callback(message.payload)
         }
     }
 
@@ -133,6 +133,176 @@ abstract class FairLeadNode extends ReteTypes.Node {
             nodeType: this.nodeType,
             controls: controlData
         }
+    }
+}
+
+export class GetSchemaNode extends FairLeadNode implements DataflowNode {
+    nodeType = "GetSchema"
+    provider: SchemaProvider;
+
+    constructor(options: FairLeadNodeOptions) {
+      super("GetSchema", options);
+      this.provider = new SchemaProvider();
+
+      this.addCustomEvent('output/connectioncreated', this.onConnectionCreated.bind(this))
+      this.addCustomEvent('output/connectionremoved', this.onConnectionRemoved.bind(this))
+
+      this.addControl(
+        'schema',
+        new FairLeadSelectControl(this.provider, { change: this.updateSelection.bind(this) })
+      );
+    }
+
+    data(inputs: Record<string, any>): Promise<Record<string, any>> | Record<string, any> {
+        return {};
+    }
+
+    onConnectionCreated(payload: any) {
+        let schemaControl = this.controls["schema"] as FairLeadSelectControl<unknown>;
+        schemaControl.readonly = true;
+    }
+
+    onConnectionRemoved(payload: any) {
+        let schemaControl = this.controls["schema"] as FairLeadSelectControl<unknown>;
+        schemaControl.readonly = false;
+    }
+
+    async updateSelection(value?: {label: string, value: Schema }) {
+        this.subLabels = [];
+        this.deleteOutputs(Object.keys(this.outputs))
+      
+        if (value ?? false) {
+            this.subLabels.push(value?.label || '');
+            this.addOutput("schema", new ReteTypes.Output(schemaSocket, value?.label || 'schema'))
+        }
+    
+        this.options.updateUiComponent('node', this.id)
+    }
+
+
+}
+
+
+abstract class PrerequisiteInputNode<SelectType> extends FairLeadNode {
+    locked: boolean;
+    depth: number;
+    selectProvider?: SelectionProvider<SelectType>;
+
+    constructor(
+            label: string,
+            options: FairLeadNodeOptions,
+            prerequisiteSlotName: string,
+            private inputSocket: ReteTypes.Socket,
+            private outputSocket: ReteTypes.Socket
+    ) {
+        super(label, options)
+        this.locked = false;
+        this.depth = 0;
+
+        this.addInput(prerequisiteSlotName, new ReteTypes.Input(inputSocket, prerequisiteSlotName))
+
+        this.addCustomEvent("input/connectioncreated", this.onInputConnectionCreated.bind(this))
+        this.addCustomEvent("output/connectioncreated", this.onOutputConnectionCreated.bind(this))
+        this.addCustomEvent("input/connectionremove", this.onInputConnectionRemove.bind(this))
+        this.addCustomEvent("input/connectionremoved", this.onInputConnectionRemoved.bind(this))
+        this.addCustomEvent("output/connectionremoved", this.onOutputConnectionRemoved.bind(this))
+    }
+
+    abstract createProvider(payload: any): SelectionProvider<SelectType>;
+
+    selectItem(option?: { label: string, value: SelectType}) {
+        this.deleteOutputs(Object.keys(this.outputs))
+        this.subLabels = this.subLabels.slice(0, this.depth);
+        if (option) {
+            this.addOutput(option.label, new ReteTypes.Output(this.outputSocket, option.label))
+            this.subLabels.push(option.label)
+        }
+    }
+
+    onOutputConnectionRemoved(payload: any) {
+        this.locked = false;
+        (this.controls["select"] as FairLeadSelectControl<unknown>).readonly = false
+    }
+
+    onInputConnectionCreated(payload: any) {
+        this.selectProvider = this.createProvider(payload);
+        this.depth = payload.sourceNode.subLabels.length;
+        this.subLabels = [...payload.sourceNode.subLabels]
+        // this.selectProvider = new SchemaClassProvider(payload.sourceNode.subLabels[0]);
+        this.addControl('select', new FairLeadSelectControl(this.selectProvider, { change: this.selectItem.bind(this) }))
+        this.options.updateUiComponent("node", this.id);
+        // this.options.updateUiComponent("control", this.controls["class"]?.id ?? '')
+    }
+
+    onOutputConnectionCreated(payload: any) {
+        this.locked = true;
+        (this.controls["select"] as FairLeadSelectControl<unknown>).readonly = true
+    }
+
+    onInputConnectionRemove(payload: any) {
+        return !this.locked;
+        // if (this.controls) {
+        //     let classControl = this.controls["class"] as FairLeadSelectControl<unknown>;
+        //     if (classControl.value) {
+        //         let classOutput = this.outputs[classControl.value?.label || ''];
+
+        //     }
+        // }
+    }
+
+    onInputConnectionRemoved(payload: any) {
+        this.selectProvider = undefined;
+        this.removeControl("select")
+        this.deleteOutputs(Object.keys(this.outputs));
+        this.subLabels = [];
+        this.options.updateUiComponent("node", this.id);
+    }
+
+}
+
+
+export class ClassNode extends PrerequisiteInputNode<ClassDefinitionView> implements DataflowNode {
+    
+    nodeType = 'SourceClass'
+    // classProvider?: SchemaClassProvider;
+    // locked: boolean
+
+    constructor(options: FairLeadNodeOptions) {
+        super("SourceClass", options, "schema", schemaSocket, classSocket)
+        // this.locked = false;
+        // this.addInput("schema", new ReteTypes.Input(schemaSocket, "schema"))  // prerequisite
+
+        // this.addCustomEvent("input/connectioncreated", this.onInputConnectionCreated.bind(this))
+        // this.addCustomEvent("output/connectioncreated", this.onOutputConnectionCreated.bind(this))
+        // this.addCustomEvent("input/connectionremove", this.onInputConnectionRemove.bind(this))
+        // this.addCustomEvent("input/connectionremoved", this.onInputConnectionRemoved.bind(this))
+        // this.addCustomEvent("output/connectionremoved", this.onOutputConnectionRemoved.bind(this))
+    }
+
+    createProvider(payload: any): SelectionProvider<ClassDefinitionView> {
+        return new SchemaClassProvider(payload.sourceNode.subLabels[0]);
+    }
+
+    data(inputs: Record<string, any>): Promise<Record<string, any>> | Record<string, any> {
+        return {}  // throw new Error('Method not implemented.');
+    }
+}
+
+
+export class GetSlotsNode extends PrerequisiteInputNode<SlotDefinitionView> implements DataflowNode {
+    
+    nodeType = 'GetSlots'
+
+    constructor(options: FairLeadNodeOptions) {
+        super("GetSlots", options, "class", classSocket, slotSocket)
+    }
+
+    createProvider(payload: any): SelectionProvider<SlotDefinitionView> {
+        return new SchemaSlotProvider(payload.sourceNode.subLabels[0], payload.sourceNode.subLabels[1]);
+    }
+
+    data(inputs: Record<string, any>): Promise<Record<string, any>> | Record<string, any> {
+        return {}
     }
 }
 

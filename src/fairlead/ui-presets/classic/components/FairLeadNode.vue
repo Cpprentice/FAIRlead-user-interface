@@ -36,9 +36,23 @@
                       text="Close Dialog"
                       @click="isActive.value = false"
                     )
-        v-row(v-for='label in data.subLabels' gap="8")
+        //- v-row(v-for='label in data.subLabels' gap="8")
+        //-   v-col
+        //-     span {{label}}
+        v-row(
+          gap="0"
+          v-if="Object.keys(data.metadata).length > 0"
+        )
           v-col
-            span {{label}}
+            .metadata-box
+              v-list.text-label-medium(theme="dark" density="compact" bg-color="transparent" prepend-gap="4")
+                v-list-item.compact-list-item(
+                  v-for="(value, key) in data.metadata"
+                  :key="key"
+                )
+                  template(#prepend)
+                    strong.metadata-key {{ key }}
+                  v-list-item-title.text-label-medium {{ value }}
 
     // Outputs
     .output(v-for='[key, output] in outputs()' :key="'output' + key + seed" :data-testid="'output-'+key")
@@ -251,5 +265,18 @@ export default defineComponent({
     }
     .v-card-text .control {
       margin-top: 1em !important;
+    }
+
+    .compact-list-item {
+      min-height: 20px !important;
+    }
+
+    .metadata-box {
+      border-left: 4px solid rgb(var(--v-theme-on-surface), 0.2);
+      // padding-left: 4px;
+    }
+
+    .metadata-key {
+      min-width: 55px
     }
 </style>

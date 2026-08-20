@@ -1,5 +1,5 @@
 import { ClassDefinitionView, Configuration, EnhancementApi, Entity, EntityApi, Partition, PartitionApi, Schema, SchemaApi, SlotDefinitionView } from "schema_api";
-import { SelectionProvider } from '@/fairlead/logic-presets/classic/controls'
+import { ExtendedSelectionProvider, SelectionProvider } from '@/fairlead/logic-presets/classic/controls'
 import { reactive, ref, watch } from "vue";
 import { entityGenerationSettings } from "./entity_generation_settings_provider";
 import { deferedPromise, DeferredPromiseType, Mutex, useDebounceFn, UseDebounceFnReturn } from "./util";
@@ -35,7 +35,7 @@ export class SchemaProvider implements SelectionProvider<Schema> {
     }
 }
 
-export class SchemaClassProvider implements SelectionProvider<ClassDefinitionView> {
+export class SchemaClassProvider implements ExtendedSelectionProvider<ClassDefinitionView> {
     schemaApi: SchemaApi;
 
     constructor(public schemaId: string) {
@@ -46,13 +46,14 @@ export class SchemaClassProvider implements SelectionProvider<ClassDefinitionVie
         let classes = await (await this.schemaApi.getClassesBySchemaRaw({schemaId: this.schemaId, ...entityGenerationSettings})).value();
         return classes.map(cls => {
             return {
-                label: cls.name,
-                value: cls
+                title: cls.name,
+                value: cls,
+                props: {}
             }
         })
     }
 
-    async fetchSelectionLabels() {
+    async fetchSelectionTitles() {
         let classes = await (await this.schemaApi.getClassesBySchemaRaw({schemaId: this.schemaId, ...entityGenerationSettings})).value();
         return classes.map(cls => cls.name);
     }
@@ -83,7 +84,7 @@ export class SchemaEntityProvider implements SelectionProvider<Entity> {
     }
 }
 
-export class SchemaSlotProvider implements SelectionProvider<SlotDefinitionView> {
+export class SchemaSlotProvider implements ExtendedSelectionProvider<SlotDefinitionView> {
     schemaApi: SchemaApi;
 
     constructor(public schemaId: string, public classId: string) {
@@ -94,13 +95,14 @@ export class SchemaSlotProvider implements SelectionProvider<SlotDefinitionView>
         let slots = await (await this.schemaApi.getSlotsBySchemaAndClassRaw({schemaId: this.schemaId, classId: this.classId, ...entityGenerationSettings})).value();
         return slots.map(slot => {
             return {
-                label: slot.name,
-                value: slot
+                title: slot.name,
+                value: slot,
+                props: {}
             }
         })
     }
 
-    async fetchSelectionLabels() {
+    async fetchSelectionTitles() {
         let slots = await (await this.schemaApi.getSlotsBySchemaAndClassRaw({schemaId: this.schemaId, classId: this.classId, ...entityGenerationSettings})).value();
         return slots.map(slot => slot.name)
     }

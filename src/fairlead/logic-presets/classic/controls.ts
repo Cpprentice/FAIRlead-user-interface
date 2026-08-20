@@ -10,14 +10,30 @@ type InputControlOptions<N> = {
     change?: (value?: N) => void
 }
 
+export type ValueType<Multiple extends boolean, T> =
+    Multiple extends true
+    ? T[]
+    : T;
+
 type SelectionOption<T> = {
     label: string,
     value: T
 }
 
+export type ExtendedSelectionOption<T> = {
+    title: string
+    value: T
+    props: Record<string, any>
+}
+
 export type SelectionProvider<T> = {
     fetchSelectionOptions: () => Promise<SelectionOption<T>[]>
     fetchSelectionLabels: () => Promise<string[]>
+}
+
+export type ExtendedSelectionProvider<T> = {
+    fetchSelectionOptions: () => Promise<ExtendedSelectionOption<T>[]>
+    fetchSelectionTitles: () => Promise<string[]>
 }
 
 export abstract class FairLeadControl<T> extends ReteTypes.Control {
@@ -48,6 +64,28 @@ export class FairLeadSelectControl<T> extends FairLeadControl<SelectionOption<T>
     //     this.value = value;
     //     if (this.options?.change) this.options.change(value)
     // }
+}
+
+export class FairLeadPreparedSelectControl<Multiple extends boolean, T> extends FairLeadControl<ValueType<Multiple, ExtendedSelectionOption<T>>> {
+    dataAvailablePromise: Promise<ExtendedSelectionOption<T>[]>
+    readonly: boolean;
+    multiple: Multiple;
+
+    // only type overrides are supported - but there must only be one ctor implementation
+    constructor(selectionProvider: ExtendedSelectionProvider<T>, multiple: Multiple, options?: InputControlOptions<ValueType<Multiple, ExtendedSelectionOption<T>>>);
+    constructor(items: ExtendedSelectionOption<T>[], multiple: Multiple, options?: InputControlOptions<ValueType<Multiple, ExtendedSelectionOption<T>>>);
+
+    constructor(dataOrProvider: ExtendedSelectionProvider<T> | ExtendedSelectionOption<T>[], multiple: Multiple, options?: InputControlOptions<ValueType<Multiple, ExtendedSelectionOption<T>>>) {
+        super(options)
+        this.id = getUID()
+        if (Array.isArray(dataOrProvider)) {
+            this.dataAvailablePromise = Promise.resolve(dataOrProvider);
+        } else {
+            this.dataAvailablePromise = dataOrProvider.fetchSelectionOptions()
+        }
+        this.readonly = false;
+        this.multiple = multiple;
+    }
 }
 
 export class FairLeadDividerControl extends FairLeadControl<string> {

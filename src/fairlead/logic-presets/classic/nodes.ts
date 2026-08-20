@@ -1,7 +1,7 @@
 import { ClassicPreset as ReteTypes, GetSchemes, NodeEditor, BaseSchemes, ConnectionBase, NodeBase } from 'rete';
 import { AreaPlugin } from 'rete-area-plugin';
 import { DataflowNode } from 'rete-engine';
-import { FairLeadSelectControl, FairLeadTextControl, FairLeadDividerControl, FairLeadControl, SelectOption, SelectionProvider } from './controls';
+import { FairLeadSelectControl, FairLeadTextControl, FairLeadDividerControl, FairLeadControl, SelectOption, SelectionProvider, ExtendedSelectionProvider, ExtendedSelectionOption, FairLeadPreparedSelectControl, ValueType } from './controls';
 import { ClassDefinitionView, CorrectionApi, Entity, Schema, SchemaApi, SlotDefinitionView } from 'schema_api';
 import { ClassProvider, EntityProvider, SchemaClassProvider, SchemaEntityProvider, SchemaProvider, SchemaSlotProvider } from '@/providers/schema_api';
 import { attributeSocket, classSocket, schemaSocket, slotSocket, streamSocket } from './sockets';
@@ -24,6 +24,7 @@ type CustomEventCallback = (payload: any) => void;
 export abstract class FairLeadNode extends ReteTypes.Node {
 
     subLabels: string[] = [];
+    metadata: Record<string, string> = {}
     abstract nodeType: string;
     private customEventHandlers: Map<string, CustomEventCallback> = new Map();
     
@@ -36,6 +37,9 @@ export abstract class FairLeadNode extends ReteTypes.Node {
         else height += 44; // header without settings button
 
         height += Object.keys(this.subLabels).length * 32; // Additional header row
+        height += Object.keys(this.metadata).length * 24  // Metadata prop row
+        height += Object.keys(this.metadata).length > 0 ? 16 : 0;  // Metadata list padding
+
 
         height += Object.keys(this.inputs).length * 36;
         height += Object.keys(this.outputs).length * 36;
@@ -169,10 +173,12 @@ export class GetSchemaNode extends FairLeadNode implements DataflowNode {
 
     async updateSelection(value?: {label: string, value: Schema }) {
         this.subLabels = [];
+        this.metadata = {}
         this.deleteOutputs(Object.keys(this.outputs))
       
         if (value ?? false) {
-            this.subLabels.push(value?.label || '');
+            // this.subLabels.push(value?.label || '');
+            // this.metadata["schema"] = value?.label || ''
             this.addOutput("schema", new ReteTypes.Output(schemaSocket, value?.label || 'schema'))
         }
     
@@ -186,12 +192,12 @@ export class GetSchemaNode extends FairLeadNode implements DataflowNode {
 abstract class PrerequisiteInputNode<SelectType> extends FairLeadNode {
     locked: boolean;
     depth: number;
-    selectProvider?: SelectionProvider<SelectType>;
+    selectProvider?: ExtendedSelectionProvider<SelectType>;
 
     constructor(
             label: string,
             options: FairLeadNodeOptions,
-            prerequisiteSlotName: string,
+            public prerequisiteSlotName: string,
             private inputSocket: ReteTypes.Socket,
             private outputSocket: ReteTypes.Socket
     ) {
@@ -208,35 +214,53 @@ abstract class PrerequisiteInputNode<SelectType> extends FairLeadNode {
         this.addCustomEvent("output/connectionremoved", this.onOutputConnectionRemoved.bind(this))
     }
 
-    abstract createProvider(payload: any): SelectionProvider<SelectType>;
+    abstract createProvider(payload: any): ExtendedSelectionProvider<SelectType>;
 
-    selectItem(option?: { label: string, value: SelectType}) {
-        this.deleteOutputs(Object.keys(this.outputs))
-        this.subLabels = this.subLabels.slice(0, this.depth);
-        if (option) {
-            this.addOutput(option.label, new ReteTypes.Output(this.outputSocket, option.label))
-            this.subLabels.push(option.label)
+    selectItem(options?: ExtendedSelectionOption<SelectType>[]) {
+        if (options === undefined) {
+            this.deleteOutputs(Object.keys(this.outputs));
+            return;
+        }
+        console.log('options', options)
+        let labelsToKeep = options.map(x => x.title);
+        console.log('keep', labelsToKeep)
+        let outputKeysToDelete = Object.keys(this.outputs).filter(x => !labelsToKeep.includes(x))
+        let outputKeysToAdd = labelsToKeep.filter(x => !Object.keys(this.outputs).includes(x))
+        this.deleteOutputs(outputKeysToDelete)
+        // this.subLabels = this.subLabels.slice(0, this.depth);
+        // if (option) {
+        //     this.addOutput(option.label, new ReteTypes.Output(this.outputSocket, option.label))
+        //     this.subLabels.push(option.label)
+        // }
+        for (let option of options) {
+            if (outputKeysToAdd.includes(option.title)) {
+                this.addOutput(option.title, new ReteTypes.Output(this.outputSocket, option.title))
+            }
         }
     }
 
     onOutputConnectionRemoved(payload: any) {
         this.locked = false;
-        (this.controls["select"] as FairLeadSelectControl<unknown>).readonly = false
+        (this.controls["select"] as FairLeadPreparedSelectControl<true, unknown>).readonly = false
     }
 
     onInputConnectionCreated(payload: any) {
-        this.selectProvider = this.createProvider(payload);
+        
         this.depth = payload.sourceNode.subLabels.length;
         this.subLabels = [...payload.sourceNode.subLabels]
+        const helper: Record<string, string> = {}
+        helper[this.prerequisiteSlotName] = payload.sourceNode.outputs[payload.outputName].label;
+        this.metadata = {...payload.sourceNode.metadata, ...helper}
+        this.selectProvider = this.createProvider(payload);
         // this.selectProvider = new SchemaClassProvider(payload.sourceNode.subLabels[0]);
-        this.addControl('select', new FairLeadSelectControl(this.selectProvider, { change: this.selectItem.bind(this) }))
+        this.addControl('select', new FairLeadPreparedSelectControl(this.selectProvider, true, { change: this.selectItem.bind(this) }))
         this.options.updateUiComponent("node", this.id);
         // this.options.updateUiComponent("control", this.controls["class"]?.id ?? '')
     }
 
     onOutputConnectionCreated(payload: any) {
         this.locked = true;
-        (this.controls["select"] as FairLeadSelectControl<unknown>).readonly = true
+        (this.controls["select"] as FairLeadPreparedSelectControl<true, unknown>).readonly = true
     }
 
     onInputConnectionRemove(payload: any) {
@@ -255,6 +279,7 @@ abstract class PrerequisiteInputNode<SelectType> extends FairLeadNode {
         this.removeControl("select")
         this.deleteOutputs(Object.keys(this.outputs));
         this.subLabels = [];
+        this.metadata = {};
         this.options.updateUiComponent("node", this.id);
     }
 
@@ -279,8 +304,8 @@ export class ClassNode extends PrerequisiteInputNode<ClassDefinitionView> implem
         // this.addCustomEvent("output/connectionremoved", this.onOutputConnectionRemoved.bind(this))
     }
 
-    createProvider(payload: any): SelectionProvider<ClassDefinitionView> {
-        return new SchemaClassProvider(payload.sourceNode.subLabels[0]);
+    createProvider(payload: any): ExtendedSelectionProvider<ClassDefinitionView> {
+        return new SchemaClassProvider(this.metadata["schema"]);
     }
 
     data(inputs: Record<string, any>): Promise<Record<string, any>> | Record<string, any> {
@@ -297,8 +322,8 @@ export class GetSlotsNode extends PrerequisiteInputNode<SlotDefinitionView> impl
         super("GetSlots", options, "class", classSocket, slotSocket)
     }
 
-    createProvider(payload: any): SelectionProvider<SlotDefinitionView> {
-        return new SchemaSlotProvider(payload.sourceNode.subLabels[0], payload.sourceNode.subLabels[1]);
+    createProvider(payload: any): ExtendedSelectionProvider<SlotDefinitionView> {
+        return new SchemaSlotProvider(this.metadata["schema"], this.metadata["class"]);
     }
 
     data(inputs: Record<string, any>): Promise<Record<string, any>> | Record<string, any> {

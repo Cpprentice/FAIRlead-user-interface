@@ -11,6 +11,7 @@ import FileControl from './components/FairLeadFileControl.vue'
 import TextControl from './components/FairLeadTextControl.vue'
 import DividerControl from './components/FairLeadDividerControl.vue'
 import SelectControl from './components/FairLeadSelectControl.vue'
+import PreparedSelectControl from './components/FairLeadPreparedSelectControl.vue'
 import Node from './components/FairLeadNode.vue'
 import Socket from './components/FairLeadSocket.vue'
 import FairLeadClassAnnotationNode from './components/FairLeadClassAnnotationNode.vue'
@@ -194,6 +195,15 @@ export function setup<Schemes extends ClassicScheme, K extends VueArea2D<Schemes
         if (context.data.payload instanceof FairLeadClassicLogicPreset.FairLeadDividerControl) {
           return {
             component: DividerControl,
+            props: {
+              data: payload
+            }
+          }
+        }
+
+        if (context.data.payload instanceof FairLeadClassicLogicPreset.FairLeadPreparedSelectControl) {
+          return {
+            component: PreparedSelectControl,
             props: {
               data: payload
             }

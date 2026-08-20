@@ -35,6 +35,32 @@ export class SchemaProvider implements SelectionProvider<Schema> {
     }
 }
 
+export class ExtendedSchemaProvider implements ExtendedSelectionProvider<Schema> {
+    schemaApi: SchemaApi;
+
+    constructor() {
+        this.schemaApi = new SchemaApi()
+    }
+
+    async fetchSelectionOptions() {
+        let schemas = await this.schemaApi.getAllSchemas()
+        return schemas.map(schema => {
+            return {
+                title: schema.id || '',
+                value: schema,
+                props: {}
+            }
+        })
+    }
+
+    async fetchSelectionTitles() {
+        let schemas = await this.schemaApi.getAllSchemas()
+        return schemas.map(schema => {
+            return schema.id || ''
+        })
+    }
+}
+
 export class SchemaClassProvider implements ExtendedSelectionProvider<ClassDefinitionView> {
     schemaApi: SchemaApi;
 

@@ -1,12 +1,13 @@
 import { ClassicPreset as ReteTypes, GetSchemes, NodeEditor, BaseSchemes, ConnectionBase, NodeBase } from 'rete';
 import { AreaPlugin } from 'rete-area-plugin';
 import { DataflowNode } from 'rete-engine';
-import { FairLeadSelectControl, FairLeadTextControl, FairLeadDividerControl, FairLeadControl, SelectOption, SelectionProvider, ExtendedSelectionProvider, ExtendedSelectionOption, FairLeadPreparedSelectControl, ValueType } from './controls';
+import { FairLeadSelectControl, FairLeadTextControl, FairLeadDividerControl, FairLeadControl, SelectOption, SelectionProvider, ExtendedSelectionProvider, ExtendedSelectionOption, FairLeadPreparedSelectControl, ValueType, FairLeadPreparedMultipleSelectControl } from './controls';
 import { ClassDefinitionView, CorrectionApi, Entity, Schema, SchemaApi, SlotDefinitionView } from 'schema_api';
-import { ClassProvider, EntityProvider, SchemaClassProvider, SchemaEntityProvider, SchemaProvider, SchemaSlotProvider } from '@/providers/schema_api';
-import { attributeSocket, classSocket, schemaSocket, slotSocket, streamSocket } from './sockets';
-import { FairleadOutput } from './outputs';
+import { ClassProvider, EntityProvider, ExtendedSchemaProvider, SchemaClassProvider, SchemaEntityProvider, SchemaProvider, SchemaSlotProvider } from '@/providers/schema_api';
+import { attributeSocket, classSocket, createAttributeSocket, createClassSocket, createSchemaSocket, createSlotSocket, createStreamSocket, FairLeadSocket, schemaSocket, slotSocket, streamSocket } from './sockets';
+import { FairleadAnnotationOutput, FairLeadOutput } from './outputs';
 import { reteSettings } from '@/providers/rete_settings_provider';
+import { FairLeadInput } from './inputs';
 
 
 export type FairLeadNodeOptions = {
@@ -29,6 +30,12 @@ export abstract class FairLeadNode extends ReteTypes.Node {
     private customEventHandlers: Map<string, CustomEventCallback> = new Map();
     
     // width = 280;
+
+    public get locked(): boolean {
+        const inputLock = Object.values(this.inputs).map(x => x as FairLeadInput).reduce((acc, x) => {return acc || (x?.locked || false)}, false)
+        const outputLock = Object.values(this.outputs).map(x => x as FairLeadOutput).reduce((acc, x) => {return acc || (x?.locked || false)}, false)
+        return inputLock || outputLock
+    }
 
     public get height() {
         let height = 6;  // bottom padding
@@ -142,18 +149,21 @@ export abstract class FairLeadNode extends ReteTypes.Node {
 
 export class GetSchemaNode extends FairLeadNode implements DataflowNode {
     nodeType = "GetSchema"
-    provider: SchemaProvider;
+    // provider: SchemaProvider;
+    provider: ExtendedSchemaProvider;
 
     constructor(options: FairLeadNodeOptions) {
       super("GetSchema", options);
-      this.provider = new SchemaProvider();
+      // this.provider = new SchemaProvider();
+      this.provider = new ExtendedSchemaProvider();
 
       this.addCustomEvent('output/connectioncreated', this.onConnectionCreated.bind(this))
       this.addCustomEvent('output/connectionremoved', this.onConnectionRemoved.bind(this))
 
       this.addControl(
         'schema',
-        new FairLeadSelectControl(this.provider, { change: this.updateSelection.bind(this) })
+        //new FairLeadSelectControl(this.provider, { change: this.updateSelection.bind(this) })
+        new FairLeadPreparedSelectControl(this.provider, { change: this.updateSelection.bind(this) })
       );
     }
 
@@ -171,7 +181,7 @@ export class GetSchemaNode extends FairLeadNode implements DataflowNode {
         schemaControl.readonly = false;
     }
 
-    async updateSelection(value?: {label: string, value: Schema }) {
+    async updateSelection(value?: {title: string, value: Schema, props: Record<string, any> }) {
         this.subLabels = [];
         this.metadata = {}
         this.deleteOutputs(Object.keys(this.outputs))
@@ -179,7 +189,7 @@ export class GetSchemaNode extends FairLeadNode implements DataflowNode {
         if (value ?? false) {
             // this.subLabels.push(value?.label || '');
             // this.metadata["schema"] = value?.label || ''
-            this.addOutput("schema", new ReteTypes.Output(schemaSocket, value?.label || 'schema'))
+            this.addOutput("schema", new ReteTypes.Output(createSchemaSocket(), value?.title || 'schema'))
         }
     
         this.options.updateUiComponent('node', this.id)
@@ -190,7 +200,6 @@ export class GetSchemaNode extends FairLeadNode implements DataflowNode {
 
 
 abstract class PrerequisiteInputNode<SelectType> extends FairLeadNode {
-    locked: boolean;
     depth: number;
     selectProvider?: ExtendedSelectionProvider<SelectType>;
 
@@ -198,14 +207,13 @@ abstract class PrerequisiteInputNode<SelectType> extends FairLeadNode {
             label: string,
             options: FairLeadNodeOptions,
             public prerequisiteSlotName: string,
-            private inputSocket: ReteTypes.Socket,
-            private outputSocket: ReteTypes.Socket
+            private inputSocketFactory: () => FairLeadSocket,
+            private outputSocketFactory: () => FairLeadSocket
     ) {
         super(label, options)
-        this.locked = false;
         this.depth = 0;
 
-        this.addInput(prerequisiteSlotName, new ReteTypes.Input(inputSocket, prerequisiteSlotName))
+        this.addInput(prerequisiteSlotName, new FairLeadInput(inputSocketFactory(), prerequisiteSlotName))
 
         this.addCustomEvent("input/connectioncreated", this.onInputConnectionCreated.bind(this))
         this.addCustomEvent("output/connectioncreated", this.onOutputConnectionCreated.bind(this))
@@ -234,14 +242,21 @@ abstract class PrerequisiteInputNode<SelectType> extends FairLeadNode {
         // }
         for (let option of options) {
             if (outputKeysToAdd.includes(option.title)) {
-                this.addOutput(option.title, new ReteTypes.Output(this.outputSocket, option.title))
+                this.addOutput(option.title, new FairLeadOutput(this.outputSocketFactory(), option.title))
             }
         }
+
+        (this.inputs[this.prerequisiteSlotName] as FairLeadInput).locked = Object.keys(this.outputs).length > 0;
+
+        this.options.updateUiComponent('node', this.id)
     }
 
     onOutputConnectionRemoved(payload: any) {
-        this.locked = false;
-        (this.controls["select"] as FairLeadPreparedSelectControl<true, unknown>).readonly = false
+        // this.locked = false;
+        (this.controls["select"] as FairLeadPreparedMultipleSelectControl<unknown>).enableItem(payload.outputName);
+        const localOutput = this.outputs[payload.outputName] as FairLeadOutput;
+        localOutput.locked = false;
+        this.options.updateUiComponent("node", this.id)
     }
 
     onInputConnectionCreated(payload: any) {
@@ -253,17 +268,21 @@ abstract class PrerequisiteInputNode<SelectType> extends FairLeadNode {
         this.metadata = {...payload.sourceNode.metadata, ...helper}
         this.selectProvider = this.createProvider(payload);
         // this.selectProvider = new SchemaClassProvider(payload.sourceNode.subLabels[0]);
-        this.addControl('select', new FairLeadPreparedSelectControl(this.selectProvider, true, { change: this.selectItem.bind(this) }))
+        this.addControl('select', new FairLeadPreparedMultipleSelectControl(this.selectProvider, { change: this.selectItem.bind(this), label: 'Make choice' }))
         this.options.updateUiComponent("node", this.id);
         // this.options.updateUiComponent("control", this.controls["class"]?.id ?? '')
     }
 
     onOutputConnectionCreated(payload: any) {
-        this.locked = true;
-        (this.controls["select"] as FairLeadPreparedSelectControl<true, unknown>).readonly = true
+        // this.locked = true;
+        (this.controls["select"] as FairLeadPreparedMultipleSelectControl<unknown>).disableItem(payload.outputName);
+        const localOutput = this.outputs[payload.outputName] as FairLeadOutput;
+        localOutput.locked = true;
+        this.options.updateUiComponent("node", this.id)
     }
 
     onInputConnectionRemove(payload: any) {
+        return !(this.inputs[payload.inputName] as FairLeadInput).locked
         return !this.locked;
         // if (this.controls) {
         //     let classControl = this.controls["class"] as FairLeadSelectControl<unknown>;
@@ -293,7 +312,7 @@ export class ClassNode extends PrerequisiteInputNode<ClassDefinitionView> implem
     // locked: boolean
 
     constructor(options: FairLeadNodeOptions) {
-        super("SourceClass", options, "schema", schemaSocket, classSocket)
+        super("SourceClass", options, "schema", createSchemaSocket, createClassSocket)
         // this.locked = false;
         // this.addInput("schema", new ReteTypes.Input(schemaSocket, "schema"))  // prerequisite
 
@@ -319,7 +338,7 @@ export class GetSlotsNode extends PrerequisiteInputNode<SlotDefinitionView> impl
     nodeType = 'GetSlots'
 
     constructor(options: FairLeadNodeOptions) {
-        super("GetSlots", options, "class", classSocket, slotSocket)
+        super("GetSlots", options, "class", createClassSocket, createSlotSocket)
     }
 
     createProvider(payload: any): ExtendedSelectionProvider<SlotDefinitionView> {
@@ -368,7 +387,7 @@ export class EntityNode extends FairLeadNode implements DataflowNode {
             this.subLabels.push(value?.label || '');
             for (let relation of value?.value.isSubjectInRelation || []) {
                 const name = relation.relationName[0];
-                this.addOutput(name, new ReteTypes.Output(streamSocket, name))
+                this.addOutput(name, new ReteTypes.Output(createStreamSocket(), name))
             }
         }
 
@@ -413,7 +432,7 @@ export class SchemaNode extends FairLeadNode implements DataflowNode {
         
             for (let entity of entities || []) {
                 const name = entity.entityName[0];
-                this.addOutput(name, new ReteTypes.Output(streamSocket, name))
+                this.addOutput(name, new ReteTypes.Output(createStreamSocket(), name))
             }
         }
     
@@ -480,7 +499,7 @@ export class ClassAnnotationNode extends FairLeadNode {
             new FairLeadTextControl({ initial: className, label: 'ClassName' })
         );
 
-        this.addInput("self", new ReteTypes.Input(streamSocket, className))
+        this.addInput("self", new ReteTypes.Input(createStreamSocket(), className))
         if (class_.relations) {
             this.addControl('divider1', new FairLeadDividerControl())
         }
@@ -488,7 +507,7 @@ export class ClassAnnotationNode extends FairLeadNode {
         //for (let [relationKey, relation] of class_.relations ?? {}) {
             let extendedRelationName = `${relation.name}-${relation.range}`;
             let relationName = relation.name;
-            this.addOutput(extendedRelationName, new FairleadOutput(streamSocket, relationName, false, [class_, relation]));
+            this.addOutput(extendedRelationName, new FairleadAnnotationOutput(createStreamSocket(), relationName, false, [class_, relation]));
             this.addControl(`relation_${relationName}`, new FairLeadTextControl({initial: relationName, label: 'RelationName'}))
         }
         if (reteSettings.showAttributes) {
@@ -498,7 +517,7 @@ export class ClassAnnotationNode extends FairLeadNode {
             for (const [key, attribute] of Object.entries(class_.attributes) as [string, SlotDefinitionView][]) {
                 // const mods = attribute.hasAttributeModifier ?? [];
                 const isKey = attribute.key;
-                this.addOutput(attribute.name, new FairleadOutput(attributeSocket, attribute.name, isKey, [class_, attribute]));
+                this.addOutput(attribute.name, new FairleadAnnotationOutput(createAttributeSocket(), attribute.name, isKey, [class_, attribute]));
                 this.addControl(`attribute_${attribute.name}`, new FairLeadTextControl({initial: attribute.name, label: 'AttributeName'}))
             }
         }
@@ -511,16 +530,16 @@ export class StaticClassNode extends FairLeadNode {
 
         super(`Class - ${truncateTitle(cls.name)}`, options)
 
-        this.addInput("self", new ReteTypes.Input(streamSocket, cls.name))
+        this.addInput("self", new ReteTypes.Input(createStreamSocket(), cls.name))
         for (const [key, relation] of Object.entries(cls.relations) as [string, SlotDefinitionView][]) {
             let extendedRelationName = `${relation.name}-${relation.range}`;
             let relationName = relation.name;
-            this.addOutput(extendedRelationName, new FairleadOutput(streamSocket, relationName, false, [cls, relation]));
+            this.addOutput(extendedRelationName, new FairleadAnnotationOutput(createStreamSocket(), relationName, false, [cls, relation]));
         }
         if (reteSettings.showAttributes) {
             for (const [key, attribute] of Object.entries(cls.attributes) as [string, SlotDefinitionView][]) {
                 const isKey = attribute.key;
-                this.addOutput(attribute.name, new FairleadOutput(attributeSocket, attribute.name, isKey, [cls, attribute]));
+                this.addOutput(attribute.name, new FairleadAnnotationOutput(createAttributeSocket(), attribute.name, isKey, [cls, attribute]));
             }
         }
     }
@@ -540,14 +559,14 @@ export class StaticEntityNode extends FairLeadNode {
             new FairLeadTextControl({ initial: entityName, label: 'EntityName' })
         );
 
-        this.addInput("self", new ReteTypes.Input(streamSocket, entityName))
+        this.addInput("self", new ReteTypes.Input(createStreamSocket(), entityName))
         if (entity.isSubjectInRelation) {
             this.addControl('divider1', new FairLeadDividerControl())
         }
         for (let relation of entity.isSubjectInRelation ?? []) {
             let extendedRelationName = `${relation.relationName[0]}-${relation.hasObjectEntity}`;
             let relationName = relation.relationName[0];
-            this.addOutput(extendedRelationName, new FairleadOutput(streamSocket, relation.relationName[0], false, null));
+            this.addOutput(extendedRelationName, new FairleadAnnotationOutput(createStreamSocket(), relation.relationName[0], false, null));
             this.addControl(`relation_${relationName}`, new FairLeadTextControl({initial: relationName, label: 'RelationName'}))
         }
         if (reteSettings.showAttributes) {
@@ -557,7 +576,7 @@ export class StaticEntityNode extends FairLeadNode {
             for (let attribute of entity.hasAttribute ?? []) {
                 const mods = attribute.hasAttributeModifier ?? [];
                 const isKey = mods.find(mod => mod.attributeModifier == 'key') !== undefined;
-                this.addOutput(attribute.attributeName[0], new FairleadOutput(attributeSocket, attribute.attributeName[0], isKey, null));
+                this.addOutput(attribute.attributeName[0], new FairleadAnnotationOutput(createAttributeSocket(), attribute.attributeName[0], isKey, null));
                 this.addControl(`attribute_${attribute.attributeName[0]}`, new FairLeadTextControl({initial: attribute.attributeName[0], label: 'AttributeName'}))
             }
         }

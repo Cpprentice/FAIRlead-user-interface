@@ -41,14 +41,14 @@
 import TerminologyDisplay from "@/components/TerminologyDisplay.vue";
 import FairLeadNode from "./FairLeadNode.vue";
 import { attributeUnderAnnotation, classUnderAnnotation } from "@/providers/component_under_annotation";
-import { FairleadOutput } from "@/fairlead/logic-presets/classic/outputs";
+import { FairleadAnnotationOutput } from "@/fairlead/logic-presets/classic/outputs";
 const props = defineProps(['data', 'emit', 'seed', 'customEmit']);
 
-function showUnitMarker(item: FairleadOutput): boolean {
+function showUnitMarker(item: FairleadAnnotationOutput): boolean {
     return Boolean(item.ref?.[1].unit)
 }
 
-function showAnnotationMarker(item: FairleadOutput): boolean {
+function showAnnotationMarker(item: FairleadAnnotationOutput): boolean {
     if (item.ref?.[1].annotations === undefined) return false
     const show = item.ref?.[1].annotations.length > 0;
     // if (show) {
@@ -57,7 +57,7 @@ function showAnnotationMarker(item: FairleadOutput): boolean {
     return show
 }
 
-function editOutput(item: FairleadOutput) {
+function editOutput(item: FairleadAnnotationOutput) {
     if (item == null) return;
     attributeUnderAnnotation.value = item.ref?.[1];
     classUnderAnnotation.value = item.ref?.[0];

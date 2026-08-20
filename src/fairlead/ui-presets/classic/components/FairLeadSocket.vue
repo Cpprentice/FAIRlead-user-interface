@@ -3,6 +3,7 @@
     :title="data.name",
     :class="[data.name.toLowerCase()]"
 )
+    v-icon.text-label-medium(v-if="data.locked") mdi-lock
 </template>
 
 <script>
@@ -24,6 +25,7 @@ export default {
     height: $socket-size;
     margin: $socket-margin;
     vertical-align: middle;
+    text-align:center;
     background: $socket-color;
     z-index: 2;
     box-sizing: border-box;

@@ -66,16 +66,40 @@ export class FairLeadSelectControl<T> extends FairLeadControl<SelectionOption<T>
     // }
 }
 
-export class FairLeadPreparedSelectControl<Multiple extends boolean, T> extends FairLeadControl<ValueType<Multiple, ExtendedSelectionOption<T>>> {
+// export class FairLeadPreparedSelectControl<Multiple extends boolean, T> extends FairLeadControl<ValueType<Multiple, ExtendedSelectionOption<T>>> {
+//     dataAvailablePromise: Promise<ExtendedSelectionOption<T>[]>
+//     readonly: boolean;
+//     multiple: Multiple;
+//     label?: string;
+
+//     // only type overrides are supported - but there must only be one ctor implementation
+//     constructor(selectionProvider: ExtendedSelectionProvider<T>, multiple: Multiple, options?: InputControlOptions<ValueType<Multiple, ExtendedSelectionOption<T>>>);
+//     constructor(items: ExtendedSelectionOption<T>[], multiple: Multiple, options?: InputControlOptions<ValueType<Multiple, ExtendedSelectionOption<T>>>);
+
+//     constructor(dataOrProvider: ExtendedSelectionProvider<T> | ExtendedSelectionOption<T>[], multiple: Multiple, options?: InputControlOptions<ValueType<Multiple, ExtendedSelectionOption<T>>>) {
+//         super(options)
+//         this.id = getUID()
+//         if (Array.isArray(dataOrProvider)) {
+//             this.dataAvailablePromise = Promise.resolve(dataOrProvider);
+//         } else {
+//             this.dataAvailablePromise = dataOrProvider.fetchSelectionOptions()
+//         }
+//         this.readonly = this.options?.readonly || false;
+//         this.label = this.options?.label || undefined;
+//         this.multiple = multiple;
+//     }
+// }
+
+export class FairLeadPreparedSelectControl<T> extends FairLeadControl<ExtendedSelectionOption<T>> {
     dataAvailablePromise: Promise<ExtendedSelectionOption<T>[]>
     readonly: boolean;
-    multiple: Multiple;
+    label?: string;
 
     // only type overrides are supported - but there must only be one ctor implementation
-    constructor(selectionProvider: ExtendedSelectionProvider<T>, multiple: Multiple, options?: InputControlOptions<ValueType<Multiple, ExtendedSelectionOption<T>>>);
-    constructor(items: ExtendedSelectionOption<T>[], multiple: Multiple, options?: InputControlOptions<ValueType<Multiple, ExtendedSelectionOption<T>>>);
+    constructor(selectionProvider: ExtendedSelectionProvider<T>, options?: InputControlOptions<ExtendedSelectionOption<T>>);
+    constructor(items: ExtendedSelectionOption<T>[], options?: InputControlOptions<ExtendedSelectionOption<T>>);
 
-    constructor(dataOrProvider: ExtendedSelectionProvider<T> | ExtendedSelectionOption<T>[], multiple: Multiple, options?: InputControlOptions<ValueType<Multiple, ExtendedSelectionOption<T>>>) {
+    constructor(dataOrProvider: ExtendedSelectionProvider<T> | ExtendedSelectionOption<T>[], options?: InputControlOptions<ExtendedSelectionOption<T>>) {
         super(options)
         this.id = getUID()
         if (Array.isArray(dataOrProvider)) {
@@ -83,8 +107,45 @@ export class FairLeadPreparedSelectControl<Multiple extends boolean, T> extends 
         } else {
             this.dataAvailablePromise = dataOrProvider.fetchSelectionOptions()
         }
-        this.readonly = false;
-        this.multiple = multiple;
+        this.readonly = this.options?.readonly || false;
+        this.label = this.options?.label || undefined;
+    }
+}
+
+export class FairLeadPreparedMultipleSelectControl<T> extends FairLeadControl<ExtendedSelectionOption<T>[]> {
+    dataAvailablePromise: Promise<ExtendedSelectionOption<T>[]>
+    readonly: boolean
+    label?: string
+
+    constructor(selectionProvider: ExtendedSelectionProvider<T>, options?: InputControlOptions<ExtendedSelectionOption<T>[]>);
+    constructor(items: ExtendedSelectionOption<T>[], options?: InputControlOptions<ExtendedSelectionOption<T>[]>);
+
+    constructor(dataOrProvider: ExtendedSelectionProvider<T> | ExtendedSelectionOption<T>[], options?: InputControlOptions<ExtendedSelectionOption<T>[]>) {
+        super(options)
+        this.id = getUID()
+        if (Array.isArray(dataOrProvider)) {
+            this.dataAvailablePromise = Promise.resolve(dataOrProvider);
+        } else {
+            this.dataAvailablePromise = dataOrProvider.fetchSelectionOptions()
+        }
+        this.readonly = options?.readonly || false
+        this.label = options?.label || undefined
+    }
+
+    async disableItem(itemTitle: string) {
+        this.setItemDisabledState(itemTitle, true);
+    }
+
+    async enableItem(itemTitle: string) {
+        this.setItemDisabledState(itemTitle, false);
+    }
+
+    async setItemDisabledState(itemTitle: string, disabled: boolean) {
+        const items = await this.dataAvailablePromise;
+        const targetItem = items.find(x => x.title == itemTitle);
+        if (targetItem !== undefined)
+            targetItem.props.disabled = disabled
+            this.dataAvailablePromise = Promise.resolve(items)
     }
 }
 

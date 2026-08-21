@@ -30,6 +30,7 @@ import { createApp } from 'vue';
 import { ClassNode, EntityNode, FairLeadNodeOptions, GetSchemaNode, SchemaNode, FairLeadNode, GetSlotsNode } from '@/fairlead/logic-presets/classic/nodes';
 import { EntityProvider, SchemaProvider } from '@/providers/schema_api';
 import { ImportExportInterface, importExportProvider } from '@/providers/import_export_provider';
+import { LockedSocketPlugin } from '@/fairlead/rete-plugins/LockedSocketPlugin';
 // import { CorrectionApi, Entity } from 'schema_api';
 
 // type Node = TextNode | FileNode | DataSourceNode | EntityNode | SchemaNode<AreaPlugin<any>>;
@@ -169,6 +170,9 @@ export async function createEditor(container: HTMLElement, mappingName: string, 
   const dataflow = new DataflowEngine<Schemes>();
 
   // editor.use(dataflow);
+
+  const lockedSocketHandler = new LockedSocketPlugin()
+  editor.use(lockedSocketHandler)
 
   const formats = [{name: 'SQL', inputs: ['connector']}]
 

@@ -27,20 +27,20 @@ import { Classic as FairLeadClassicUiPreset } from '../fairlead/ui-presets'
 import { Classic as FairLeadClassicLogicPreset } from '../fairlead/logic-presets'
 import vuetify from '@/plugins/vuetify';
 import { createApp } from 'vue';
-import { ClassNode, EntityNode, FairLeadNodeOptions, GetSchemaNode, SchemaNode, FairLeadNode, GetSlotsNode } from '@/fairlead/logic-presets/classic/nodes';
+import { EntityNode, FairLeadNodeOptions, GetSchemaNode, SchemaNode, FairLeadNode, GetSlotsNode, GetClassesNode } from '@/fairlead/logic-presets/classic/nodes';
 import { EntityProvider, SchemaProvider } from '@/providers/schema_api';
 import { ImportExportInterface, importExportProvider } from '@/providers/import_export_provider';
 import { LockedSocketPlugin } from '@/fairlead/rete-plugins/LockedSocketPlugin';
 // import { CorrectionApi, Entity } from 'schema_api';
 
 // type Node = TextNode | FileNode | DataSourceNode | EntityNode | SchemaNode<AreaPlugin<any>>;
-type Node = EntityNode | SchemaNode | ClassNode | GetSchemaNode | GetSlotsNode;
+type Node = EntityNode | SchemaNode | GetClassesNode | GetSchemaNode | GetSlotsNode;
 type Conn =
   | Connection<EntityNode, EntityNode>
   | Connection<SchemaNode, EntityNode>
-  | Connection<SchemaNode, ClassNode>
-  | Connection<GetSchemaNode, ClassNode>
-  | Connection<ClassNode, GetSlotsNode>
+  | Connection<SchemaNode, GetClassesNode>
+  | Connection<GetSchemaNode, GetClassesNode>
+  | Connection<GetClassesNode, GetSlotsNode>
 type Schemes = GetSchemes<Node, Conn>;
 
 class Connection<A extends Node, B extends Node> extends Classic.Connection<
@@ -110,10 +110,12 @@ export async function createEditor(container: HTMLElement, mappingName: string, 
   // const readonly = new ReadonlyPlugin<Schemes>();
   const contextMenu = new ContextMenuPlugin<Schemes>({
     items: ContextMenuPresets.classic.setup([
-      ['Entity', () => new EntityNode(fairleadOptions)],
-      ['Schema', () => new SchemaNode(fairleadOptions)],
-      ['Class', () => new ClassNode(fairleadOptions)],
-      ['GetSchema', () => new GetSchemaNode(fairleadOptions)],
+      // ['Entity', () => new EntityNode(fairleadOptions)],
+      // ['Schema', () => new SchemaNode(fairleadOptions)],
+      ['GetSourceSchema', () => new GetSchemaNode(fairleadOptions, "Source")],
+      ['GetTargetSchema', () => new GetSchemaNode(fairleadOptions, "Target")],
+      ['GetSourceClasses', () => new GetClassesNode(fairleadOptions, "Source")],
+      ['GetTargetClasses', () => new GetClassesNode(fairleadOptions, "Target")],
       ['GetSlots', () => new GetSlotsNode(fairleadOptions)]
     ]),
   });

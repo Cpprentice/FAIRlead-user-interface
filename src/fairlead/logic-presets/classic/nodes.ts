@@ -4,10 +4,11 @@ import { DataflowNode } from 'rete-engine';
 import { FairLeadSelectControl, FairLeadTextControl, FairLeadDividerControl, FairLeadControl, SelectOption, SelectionProvider, ExtendedSelectionProvider, ExtendedSelectionOption, FairLeadPreparedSelectControl, ValueType, FairLeadPreparedMultipleSelectControl } from './controls';
 import { ClassDefinitionView, CorrectionApi, Entity, Schema, SchemaApi, SlotDefinitionView } from 'schema_api';
 import { ClassProvider, EntityProvider, ExtendedSchemaProvider, SchemaClassProvider, SchemaEntityProvider, SchemaProvider, SchemaSlotProvider } from '@/providers/schema_api';
-import { attributeSocket, classSocket, createAttributeSocket, createClassSocket, createSchemaSocket, createSlotSocket, createStreamSocket, FairLeadSocket, schemaSocket, slotSocket, streamSocket } from './sockets';
+import { attributeSocket, classSocket, createAttributeSocket, createClassSocket, createSchemaSocket, createSlotSocket, createStreamSocket, FairLeadSocket, MappingSocketKind, schemaSocket, slotSocket, socketFactory, SocketType, streamSocket } from './sockets';
 import { FairleadAnnotationOutput, FairLeadOutput } from './outputs';
 import { reteSettings } from '@/providers/rete_settings_provider';
 import { FairLeadInput } from './inputs';
+import { measureText } from '@/providers/util';
 
 
 export type FairLeadNodeOptions = {
@@ -56,24 +57,42 @@ export abstract class FairLeadNode extends ReteTypes.Node {
     }
 
     get maxTextLength() {
-        let combinedList = [
-            ...Object.values(this.outputs).map(x => x.label.length * 1.4),
-            ...Object.values(this.inputs).map(x => x.label.length * 1.4),
-            Math.floor(this.label.length * 1.6),
-            ...Object.values(this.subLabels).map(x => x.length * 1.6)
-        ]
-        // return Math.max(...combinedList.map(str => str.length));
-        return Math.max(...combinedList);
+        let maxInputAndOutputCharLength = Math.max(
+            ...[
+                ...Object.values(this.outputs).map(x => x?.label?.length || 0),
+                ...Object.values(this.inputs).map(x => x?.label?.length || 0),
+                0  //workaround for empty lists
+            ]
+        )
+
+        const longestString = "W".repeat(maxInputAndOutputCharLength)
+        const inputAndOutputStats = measureText(longestString, {
+            fontSize: 14,
+            fontFamily: "sans-serif"
+        })
+
+        const labelStats = measureText(this.label, {
+            fontSize: 18,
+            fontFamily: "sans-serif"
+        })
+
+        // TODO if we reuse the subLabels this needs to go here as well
+        return Math.max(...[
+            Math.ceil(inputAndOutputStats.width) + 2 + 18,  // text spacing + half socket
+            Math.ceil(labelStats.width) + 2 + 8 + 32 + 16  // text spacing + gap + settingsIcon + row padding
+        ])
     }
 
     public get size() {
-        if (this.maxTextLength > 42) return 'huge';
-        if (this.maxTextLength > 33) return 'large';
-        if (this.maxTextLength > 24) return 'medium';
-        return 'small'
+        const requiredWidth = this.maxTextLength + 4;  // border
+        if (requiredWidth > 350) return 'huge';
+        if (requiredWidth > 280) return 'large';
+        if (requiredWidth > 210) return 'medium';
+        return 'small';
     }
 
     public get width() {
+        // this likely needs to fit the CSS classes for size in the Vue Node Component
         switch (this.size) {
             case 'huge': return 420;
             case 'large': return 350;
@@ -152,8 +171,8 @@ export class GetSchemaNode extends FairLeadNode implements DataflowNode {
     // provider: SchemaProvider;
     provider: ExtendedSchemaProvider;
 
-    constructor(options: FairLeadNodeOptions) {
-      super("GetSchema", options);
+    constructor(options: FairLeadNodeOptions, public kind: MappingSocketKind) {
+      super(`Get${kind}Schema`, options);
       // this.provider = new SchemaProvider();
       this.provider = new ExtendedSchemaProvider();
 
@@ -172,24 +191,20 @@ export class GetSchemaNode extends FairLeadNode implements DataflowNode {
     }
 
     onConnectionCreated(payload: any) {
-        let schemaControl = this.controls["schema"] as FairLeadSelectControl<unknown>;
+        let schemaControl = this.controls["schema"] as FairLeadPreparedSelectControl<unknown>;
         schemaControl.readonly = true;
     }
 
     onConnectionRemoved(payload: any) {
-        let schemaControl = this.controls["schema"] as FairLeadSelectControl<unknown>;
+        let schemaControl = this.controls["schema"] as FairLeadPreparedSelectControl<unknown>;
         schemaControl.readonly = false;
     }
 
     async updateSelection(value?: {title: string, value: Schema, props: Record<string, any> }) {
-        this.subLabels = [];
-        this.metadata = {}
         this.deleteOutputs(Object.keys(this.outputs))
       
         if (value ?? false) {
-            // this.subLabels.push(value?.label || '');
-            // this.metadata["schema"] = value?.label || ''
-            this.addOutput("schema", new ReteTypes.Output(createSchemaSocket(), value?.title || 'schema'))
+            this.addOutput("schema", new FairLeadOutput(socketFactory(this.kind, SocketType.Schema), value?.title || 'schema'))
         }
     
         this.options.updateUiComponent('node', this.id)
@@ -305,14 +320,14 @@ abstract class PrerequisiteInputNode<SelectType> extends FairLeadNode {
 }
 
 
-export class ClassNode extends PrerequisiteInputNode<ClassDefinitionView> implements DataflowNode {
+export class GetClassesNode extends PrerequisiteInputNode<ClassDefinitionView> implements DataflowNode {
     
-    nodeType = 'SourceClass'
+    nodeType = 'GetClasses'
     // classProvider?: SchemaClassProvider;
     // locked: boolean
 
-    constructor(options: FairLeadNodeOptions) {
-        super("SourceClass", options, "schema", createSchemaSocket, createClassSocket)
+    constructor(options: FairLeadNodeOptions, public kind: MappingSocketKind) {
+        super(`Get${kind}Classes`, options, "schema", () => socketFactory(kind, SocketType.Schema), () => socketFactory(kind, SocketType.Class))
         // this.locked = false;
         // this.addInput("schema", new ReteTypes.Input(schemaSocket, "schema"))  // prerequisite
 

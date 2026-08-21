@@ -206,3 +206,35 @@ export function deferedPromise<T = void>(): DeferredPromiseType<T> {
   // return deferred;
 }
 
+
+export function getFontFromElement(element: Element): string {
+  const style = getComputedStyle(element);
+  return style.font;
+} 
+
+
+export function measureText(text: string, {
+  fontSize = 14,
+  fontFamily = 'Roboto, sans-serif',
+  fontWeight = '400',
+  fontStyle = 'normal',
+  fontVariant = 'normal'
+} = {}) {
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+
+  if (ctx == null) throw Error('Invalid Browser api usage')
+  
+  ctx.font = `${fontStyle} ${fontVariant} ${fontWeight} ${fontSize}px ${fontFamily}`;
+
+  const metrics = ctx.measureText(text);
+
+  return {
+    width: metrics.width,
+    actualLeft: metrics.actualBoundingBoxLeft,
+    actualRight: metrics.actualBoundingBoxRight,
+    height:
+      metrics.actualBoundingBoxAscent +
+      metrics.actualBoundingBoxDescent
+  };
+}

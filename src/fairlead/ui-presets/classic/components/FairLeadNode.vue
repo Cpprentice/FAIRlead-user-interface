@@ -1,7 +1,7 @@
 <template lang="pug">
 .node(:class="[{ selected: data.selected }, data.label.toLowerCase(), data.size ]" :style="nodeStyles()" data-testid="node")
     .title(data-testid="title")
-        v-row
+        v-row(gap=8)
           v-col
             span {{data.label}}
           v-col(cols="auto")
